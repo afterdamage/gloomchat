@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=GloomChat
+GenericName=Matrix Client
+Comment=Chat with your friends
+Exec=gloomchat
+Icon=${SNAP}/meta/gui/gloomchat.png
+Terminal=false
+Type=Application
+Categories=Network;Chat;InstantMessaging;

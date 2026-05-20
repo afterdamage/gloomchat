@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="GloomChat Privacy Policy for web and mobile clients.">
+  <meta name="theme-color" content="#282a36">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <title>GloomChat Privacy Policy</title>
+  <style>
+    :root {
+      --bg: #282a36;
+      --surface: #1f2230;
+      --surface-2: #2b3042;
+      --text: #f8f8f2;
+      --muted: #c5c7d3;
+      --accent: #ff5555;
+      --accent-2: #8be9fd;
+      --border: #44475a;
+      --max-width: 980px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Courier New", Courier, monospace;
+      background: radial-gradient(1200px 600px at 80% -20%, #3a3f5a 0%, var(--bg) 60%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .wrap {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      background: rgba(31, 34, 48, 0.78);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      max-width: var(--max-width);
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: bold;
+      letter-spacing: 0.03em;
+    }
+
+    .brand span { color: var(--accent); }
+
+    .actions a {
+      display: inline-block;
+      border: 1px solid var(--border);
+      color: var(--text);
+      text-decoration: none;
+      padding: 8px 12px;
+      font-size: 14px;
+      margin-left: 8px;
+      background: var(--surface-2);
+    }
+
+    .actions a:hover {
+      border-color: var(--accent-2);
+      color: var(--accent-2);
+    }
+
+    .hero {
+      margin-top: 26px;
+      margin-bottom: 18px;
+      padding: 20px;
+      border: 1px solid var(--border);
+      background: rgba(31, 34, 48, 0.75);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 34px;
+      line-height: 1.2;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .toc,
+    .card {
+      margin: 16px 0;
+      border: 1px solid var(--border);
+      background: rgba(31, 34, 48, 0.65);
+      padding: 16px;
+    }
+
+    .toc h2,
+    .card h2 { margin-top: 0; }
+
+    .toc a {
+      color: var(--accent-2);
+      text-decoration: none;
+    }
+
+    .toc ul {
+      margin: 8px 0 0;
+      padding-left: 20px;
+    }
+
+    .card h2 {
+      border-left: 4px solid var(--accent);
+      padding-left: 10px;
+    }
+
+    .card h3 {
+      margin-top: 16px;
+      margin-bottom: 8px;
+      color: var(--accent-2);
+    }
+
+    a {
+      color: var(--accent-2);
+    }
+
+    pre {
+      overflow-x: auto;
+      background: #1a1d29;
+      border: 1px solid var(--border);
+      padding: 10px;
+      font-size: 13px;
+    }
+
+    code { font-family: "Courier New", Courier, monospace; }
+
+    footer {
+      margin: 24px 0 30px;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 700px) {
+      h1 { font-size: 28px; }
+      .topbar-inner { flex-direction: column; align-items: flex-start; }
+      .actions a { margin-left: 0; margin-right: 8px; margin-top: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/landing.html">Gloom<span>Chat</span></a>
+      <nav class="actions" aria-label="Quick links">
+        <a href="/landing.html">Home</a>
+        <a href="/">Open App</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Privacy Policy</h1>
+      <p class="subtitle">Applies to GloomChat on Android, iOS, Linux, and Web.</p>
+    </section>
+
+    <section class="toc" aria-labelledby="toc-title">
+      <h2 id="toc-title">Contents</h2>
+      <ul>
+        <li><a href="#matrix">Matrix</a></li>
+        <li><a href="#database">Database</a></li>
+        <li><a href="#encryption">Encryption</a></li>
+        <li><a href="#permissions">App Permissions</a></li>
+        <li><a href="#push">Push Notifications</a></li>
+        <li><a href="#safety">Google Play Safety Standards</a></li>
+      </ul>
+    </section>
+
+    <section class="card" id="matrix">
+      <h2>Matrix</h2>
+      <p>GloomChat uses the Matrix protocol. GloomChat is a client that can connect to compatible Matrix servers. The data protection terms of the selected server apply.</p>
+      <p>For convenience, one or more servers may be set as defaults. GloomChat developers do not guarantee the trustworthiness of any server. Before first communication, users are informed which server is used.</p>
+      <p>GloomChat communicates with the selected server and with OpenStreetMap for map display.</p>
+      <p>More information: <a href="https://matrix.org" target="_blank" rel="noopener noreferrer">matrix.org</a></p>
+    </section>
+
+    <section class="card" id="database">
+      <h2>Database</h2>
+      <p>GloomChat caches some server data locally. On mobile and desktop this uses sqflite. On web, IndexedDB is used. GloomChat attempts to encrypt local data with SQLCipher and stores encryption keys in secure storage when supported.</p>
+      <p>More information:</p>
+      <ul>
+        <li><a href="https://pub.dev/packages/sqflite" target="_blank" rel="noopener noreferrer">sqflite</a></li>
+        <li><a href="https://pub.dev/packages/sqlcipher_flutter_libs" target="_blank" rel="noopener noreferrer">sqlcipher_flutter_libs</a></li>
+      </ul>
+    </section>
+
+    <section class="card" id="encryption">
+      <h2>Encryption</h2>
+      <p>All communication between GloomChat and servers uses transport encryption.</p>
+      <p>GloomChat also supports end-to-end encryption using Vodozemac and enables it by default for private chats.</p>
+      <p>More information: <a href="https://github.com/matrix-org/vodozemac" target="_blank" rel="noopener noreferrer">Vodozemac</a></p>
+    </section>
+
+    <section class="card" id="permissions">
+      <h2>App Permissions</h2>
+      <p>Permissions on Android and iOS are similar, but exact names can differ.</p>
+      <h3>Internet Access</h3>
+      <p>Required to communicate with Matrix servers.</p>
+      <h3>Notifications</h3>
+      <p>Used for local and push notifications about new messages, calls, and other app activity.</p>
+      <h3>Vibrate</h3>
+      <p>Used for local notifications.</p>
+      <h3>Camera</h3>
+      <p>Used for camera-based features such as taking photos or scanning QR codes when the user chooses to do so.</p>
+      <h3>Record Audio</h3>
+      <p>Required to send voice messages and participate in calls.</p>
+      <h3>Write External Storage</h3>
+      <p>Required to save received files.</p>
+      <h3>Read External Storage</h3>
+      <p>Required to send files from local storage.</p>
+      <h3>Location</h3>
+      <p>Used only when a user chooses to share current location in chat.</p>
+      <h3>Bluetooth</h3>
+      <p>Used for audio accessories such as headsets or other connected devices during calls or voice use.</p>
+      <h3>Modify Audio Settings</h3>
+      <p>Used to adjust audio routing and audio behavior during voice and call features.</p>
+      <h3>Wake Lock</h3>
+      <p>Used to keep the device awake during calls, voice messages, or other active foreground tasks.</p>
+      <h3>Foreground Service</h3>
+      <p>Used for ongoing features such as calls, microphone use, camera use, or screen sharing when the user starts those features.</p>
+    </section>
+
+    <section class="card" id="push">
+      <h2>Push Notifications</h2>
+      <p>On Android and iOS, GloomChat uses Firebase Cloud Messaging (FCM) for push delivery:</p>
+      <ol>
+        <li>The Matrix server sends a push payload to the push gateway.</li>
+        <li>The gateway forwards it to FCM.</li>
+        <li>FCM queues delivery until the device is reachable.</li>
+        <li>The device receives and displays the notification.</li>
+      </ol>
+      <p>Gateway reference: <a href="https://github.com/matrix-org/sygnal" target="_blank" rel="noopener noreferrer">matrix-org/sygnal</a></p>
+      <p>GloomChat uses the <code>event_id_only</code> push format.</p>
+      <pre><code>{
+  "notification": {
+    "event_id": "$3957tyerfgewrf384",
+    "room_id": "!slw48wfj34rtnrf:example.com",
+    "counts": {
+      "unread": 2,
+      "missed_calls": 1
+    },
+    "devices": [
+      {
+        "app_id": "im.gloomchat.android",
+        "pushkey": "V2h5IG9uIGVhcnRoIGRpZCB5b3UgZGVjb2RlIHRoaXM/",
+        "pushkey_ts": 12345678,
+        "data": {},
+        "tweaks": {
+          "sound": "bing"
+        }
+      }
+    ]
+  }
+}</code></pre>
+    </section>
+
+    <section class="card" id="safety">
+      <h2>Google Play Safety Standards</h2>
+      <p>GloomChat is committed to helping maintain a safe and respectful environment. As a Matrix client, GloomChat connects users to Matrix servers, but does not directly host those servers.</p>
+      <p>Users can report harmful content or users to server administrators from inside the app by using report actions on messages and profiles.</p>
+      <p>Moderation reference: <a href="https://matrix.org/docs/older/moderation/" target="_blank" rel="noopener noreferrer">Matrix moderation docs</a></p>
+    </section>
+
+    <footer>
+      Last updated: 2026-05-09
+    </footer>
+  </main>
+</body>
+</html>

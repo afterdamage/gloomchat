@@ -1,0 +1,11 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="#FFFFFF">
+  <!-- Simple "A" shape for notification icon -->
+  <path
+      android:pathData="M12,3L6,18h3l1.2,-3h3.6L15,18h3L12,3zM10.5,12L12,8.5L13.5,12h-3z"
+      android:fillColor="#4A0F1F"/>
+</vector>

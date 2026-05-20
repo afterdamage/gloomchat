@@ -1,0 +1,8 @@
+{
+    "[dart]": {
+        "editor.codeActionsOnSave": [
+            "source.organizeImports"
+        ]
+    },
+    "cmake.sourceDirectory": "/home/heretic/afterdamage_chat/gloomchat/linux"
+}

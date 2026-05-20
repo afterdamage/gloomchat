@@ -1,0 +1,1 @@
+GloomChat release. See https://github.com/afterdamage/gloomchat for details.

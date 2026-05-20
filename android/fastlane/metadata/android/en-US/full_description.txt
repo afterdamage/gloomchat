@@ -1,0 +1,32 @@
+A secure, open-source Matrix messenger for Ubuntu Touch, Android and iOS.
+
+Open
+Opensource and open development where everyone can join.
+
+Nonprofit
+Community funded and developed.
+
+Clean Design ♥
+Modern design with many theme settings including a dark mode. 
+
+One-to-one and group chats
+Unlimited groups and direct chats.
+
+Easy
+Made as simple to use as possible.
+
+Free
+Free to use for everyone without ads.
+
+Decentralized
+No central server you're forced to use. Use the server you trust or host your own.
+
+Compatible
+Compatible with Element, Fractal, Nheko and all Matrix messengers.
+
+
+Built with a vision
+
+Imagine a world where everyone can choose the messenger they like and is still able to chat with all of their friends.
+A world where there are no companies spying on you when you send messages to loved ones.
+A world where apps prioritize privacy and user freedom over profit. ♥

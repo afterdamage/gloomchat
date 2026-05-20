@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=GloomChat
+GenericName=Matrix Client
+Comment=Chat with your friends
+Exec=gloomchat
+Icon=gloomchat
+Terminal=false
+Type=Application
+Categories=Network;Chat;InstantMessaging;
+StartupWMClass=gloomchat
