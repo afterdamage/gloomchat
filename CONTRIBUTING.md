@@ -23,6 +23,8 @@ If you're unsure whether something is in scope, ask in an issue.
 3. Run `flutter pub get` to fetch dependencies.
 4. Run `flutter run` against a device or emulator to verify everything works before making changes.
 
+If you want to run the repository's test suites, see the `test/` and `integration_test/` directories. Integration tests require Docker and a local homeserver.
+
 ---
 
 ## Making changes
@@ -105,6 +107,19 @@ Run both of these and fix any issues:
 ```bash
 dart format lib
 flutter analyze
+```
+
+For test coverage, also run:
+
+```bash
+flutter test test
+```
+
+To run integration tests locally:
+
+```bash
+./scripts/prepare_integration_test.sh
+flutter test integration_test/mobile_test.dart
 ```
 
 PRs that fail formatting or analysis will not be merged.

@@ -113,6 +113,27 @@ sudo apt install libsecret-1-dev libsecret-1-0 librhash0 libwebkit2gtk-4.0-dev l
 
 ---
 
+## Testing
+
+Unit and widget tests live in `test/` and can be run with:
+
+```bash
+flutter test test
+```
+
+Integration tests live in `integration_test/` and exercise real app flows against a local Synapse homeserver. To run them:
+
+```bash
+./scripts/prepare_integration_test.sh
+flutter test integration_test/mobile_test.dart
+```
+
+The integration test environment is configured in `integration_test/data/integration_users.env`. A sample file is provided at `integration_test/data/integration_users.env.sample`.
+
+`integration_test/flows/` contains end-to-end scenarios such as login, messaging, chat archive, and logout.
+
+---
+
 ## Configuration
 
 Most behavior is configurable at runtime through the in-app settings. For deployments (notably web), runtime defaults can be overridden via `config.json`. Every available key is listed in [config.sample.json](config.sample.json) — only set the keys you actually want to change; everything else falls back to a sensible default.
