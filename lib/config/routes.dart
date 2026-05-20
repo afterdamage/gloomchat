@@ -62,13 +62,14 @@ abstract class AppRoutes {
       redirect: (context, state) =>
           Matrix.of(context).widget.clients.any((client) => client.isLogged())
           ? '/rooms'
-          : '/home',
+          : '/home/sign_in',
     ),
     GoRoute(
       path: '/home',
-      pageBuilder: (context, state) =>
-          defaultPageBuilder(context, state, const IntroPagePresenter()),
-      redirect: loggedInRedirect,
+      redirect: (context, state) =>
+          Matrix.of(context).widget.clients.any((client) => client.isLogged())
+          ? '/rooms'
+          : '/home/sign_in',
       routes: [
         GoRoute(
           path: 'sign_in',
