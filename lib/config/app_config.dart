@@ -15,7 +15,7 @@ abstract class AppConfig {
   static const String inviteLinkPrefix = 'https://matrix.to/#/';
   static const String deepLinkPrefix = 'im.gloomchat://chat/';
   static const String appSsoUrlScheme = 'im.gloomchat.auth';
-  static const String gloomchatInviteHost = 'www.gloomchat.com';
+  static const String gloomchatInviteHost = '';
   static const String gloomchatInvitePathPrefix = '/i/';
   static const String gloomchatInviteUrlPrefix =
       'https://$gloomchatInviteHost$gloomchatInvitePathPrefix';

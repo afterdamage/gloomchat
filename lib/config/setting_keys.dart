@@ -65,16 +65,10 @@ enum AppSettings<T> {
   jitsiDomain<String>('chat.gloom.jitsi_domain', 'meet.jit.si'),
   presetHomeserver<String>('chat.gloom.preset_homeserver', ''),
   welcomeText<String>('chat.gloom.welcome_text', ''),
-  website<String>('chat.gloom.website_url', 'https://gloomchat.com'),
-  logoUrl<String>(
-    'chat.gloom.logo_url',
-    'https://gloomchat.com/assets/favicon.png',
-  ),
-  privacyPolicy<String>(
-    'chat.gloom.privacy_policy_url',
-    'https://gloomchat.com/privacy',
-  ),
-  tos<String>('chat.gloom.tos_url', 'https://gloomchat.com/tos'),
+  website<String>('chat.gloom.website_url', ''),
+  logoUrl<String>('chat.gloom.logo_url', ''),
+  privacyPolicy<String>('chat.gloom.privacy_policy_url', ''),
+  tos<String>('chat.gloom.tos_url', ''),
   sendTimelineEventTimeout<int>('chat.gloom.send_timeline_event_timeout', 15),
   lastSeenSupportBanner<int>('chat.gloom.last_seen_support_banner', 0),
   supportBannerOptOut<bool>('chat.gloom.support_banner_opt_out', false);

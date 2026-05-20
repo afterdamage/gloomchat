@@ -1,3 +1,4 @@
+import 'package:afterdamage/config/setting_keys.dart';
 import 'package:afterdamage/config/themes.dart';
 import 'package:afterdamage/l10n/l10n.dart';
 import 'package:afterdamage/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
@@ -218,9 +219,8 @@ class ClientChooserButton extends StatelessWidget {
           GloomShare.shareInviteLink(context);
           break;
         case SettingsAction.support:
-          launchUrlString(
-            'https://gloomchat.com/faq/#how_can_i_support_gloomchat',
-          );
+          final supportUrl = AppSettings.website.value;
+          if (supportUrl.isNotEmpty) launchUrlString(supportUrl);
           break;
         case SettingsAction.settings:
           context.go('/rooms/settings');
