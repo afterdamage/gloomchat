@@ -350,7 +350,7 @@ class AppDrawer extends StatelessWidget {
 
   Widget _buildDrawerItem({
     required BuildContext context,
-    required IconData icon,
+    required FaIconData icon,
     required String title,
     required String route,
     required String currentRoute,
@@ -361,7 +361,7 @@ class AppDrawer extends StatelessWidget {
     final isActive = route.isNotEmpty && currentRoute.startsWith(route);
     
     return ListTile(
-      leading: Icon(
+      leading: FaIcon(
         icon,
         color: iconColor ?? (isActive ? theme.colorScheme.primary : theme.colorScheme.onSurface),
       ),

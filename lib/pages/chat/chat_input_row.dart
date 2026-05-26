@@ -194,7 +194,7 @@ class ChatInputRow extends StatelessWidget {
                                   theme.colorScheme.primaryContainer,
                               foregroundColor:
                                   theme.colorScheme.onPrimaryContainer,
-                              child: const Icon(
+                              child: const FaIcon(
                                 FontAwesomeIcons.video,
                               ),
                             ),
@@ -281,7 +281,7 @@ class ChatInputRow extends StatelessWidget {
                       useRootNavigator: true,
                       tooltip: 'Burn on Read',
                       initialValue: controller.burnTime,
-                      icon: Icon(
+                      icon: FaIcon(
                         FontAwesomeIcons.fire,
                         color: controller.burnTime > 0
                             ? Colors.orange
@@ -334,7 +334,7 @@ class ChatInputRow extends StatelessWidget {
                             child: child,
                           );
                         },
-                        child: Icon(
+                        child: FaIcon(
                           controller.showEmojiPicker
                               ? FontAwesomeIcons.keyboard
                               : FontAwesomeIcons.faceSmile,

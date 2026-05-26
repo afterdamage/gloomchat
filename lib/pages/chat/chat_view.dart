@@ -401,7 +401,7 @@ class ChatView extends StatelessWidget {
                                               foregroundColor:
                                                   theme.colorScheme.error,
                                             ),
-                                            icon: const Icon(
+                                            icon: const FaIcon(
                                               FontAwesomeIcons.boxArchive,
                                             ),
                                             onPressed: controller.leaveChat,
@@ -411,7 +411,7 @@ class ChatView extends StatelessWidget {
                                             style: TextButton.styleFrom(
                                               padding: const EdgeInsets.all(16),
                                             ),
-                                            icon: const Icon(
+                                            icon: const FaIcon(
                                               FontAwesomeIcons.comments,
                                             ),
                                             onPressed: controller.recreateChat,

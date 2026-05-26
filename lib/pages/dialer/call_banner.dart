@@ -498,7 +498,7 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
 
 /// A small control button used in the sidebar call panel.
 class _SidebarControlButton extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final Color color;
   final Color bgColor;
   final VoidCallback? onTap;
@@ -530,7 +530,7 @@ class _SidebarControlButton extends StatelessWidget {
               borderRadius: BorderRadius.zero,
               color: bgColor,
             ),
-            child: Icon(icon, color: color, size: 13),
+            child: FaIcon(icon, color: color, size: 13),
           ),
         ),
       ),
@@ -655,7 +655,7 @@ class _CallFloatingPanelState extends State<CallFloatingPanel> {
             ),
             child: Row(
               children: [
-                Icon(
+                FaIcon(
                   voiceonly
                       ? FontAwesomeIcons.phone
                       : FontAwesomeIcons.video,
@@ -868,7 +868,7 @@ class _CallFloatingPanelState extends State<CallFloatingPanel> {
                     borderRadius: BorderRadius.zero,
                     color: DraculaColors.red,
                   ),
-                  child: const Icon(
+                  child: const FaIcon(
                     FontAwesomeIcons.phoneSlash,
                     color: DraculaColors.foreground,
                     size: 14,
@@ -884,7 +884,7 @@ class _CallFloatingPanelState extends State<CallFloatingPanel> {
 }
 
 class _FloatingControlButton extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final Color color;
   final Color? bgColor;
   final VoidCallback? onTap;
@@ -917,7 +917,7 @@ class _FloatingControlButton extends StatelessWidget {
               color: bgColor ??
                   DraculaColors.background.withValues(alpha: 0.5),
             ),
-            child: Icon(icon, color: color, size: size * 0.38),
+            child: FaIcon(icon, color: color, size: size * 0.38),
           ),
         ),
       ),
@@ -1016,7 +1016,7 @@ class _ParticipantAvatar extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              FaIcon(
                 FontAwesomeIcons.microphoneSlash,
                 color: DraculaColors.red,
                 size: 10,

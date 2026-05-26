@@ -125,7 +125,7 @@ class SettingsStyleView extends StatelessWidget {
                           ),
                           if (isSelected) ...[
                             const SizedBox(height: 4),
-                            Icon(
+                            FaIcon(
                               FontAwesomeIcons.solidCircleCheck,
                               color: theme.colorScheme.surface,
                               size: 20,
@@ -193,7 +193,7 @@ class SettingsStyleView extends StatelessWidget {
                           ),
                           child: isSelected
                               ? Center(
-                                  child: Icon(
+                                  child: FaIcon(
                                     FontAwesomeIcons.check,
                                     size: 16,
                                     color: color != null
@@ -205,7 +205,7 @@ class SettingsStyleView extends StatelessWidget {
                                 )
                               : color == null
                                   ? Center(
-                                      child: Icon(
+                                      child: FaIcon(
                                         FontAwesomeIcons.ban,
                                         size: 14,
                                         color: theme.colorScheme.onSurface.withOpacity(0.5),

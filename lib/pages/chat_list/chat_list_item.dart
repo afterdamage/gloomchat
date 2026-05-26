@@ -164,7 +164,7 @@ class ChatListItem extends StatelessWidget {
                               child: Material(
                                 color: backgroundColor,
                                 borderRadius: BorderRadius.zero,
-                                child: const Icon(
+                                child: const FaIcon(
                                   FontAwesomeIcons.circleChevronDown,
                                   size: 18,
                                 ),
@@ -202,7 +202,7 @@ class ChatListItem extends StatelessWidget {
                       padding: EdgeInsets.only(
                         right: hasNotifications ? 4.0 : 0.0,
                       ),
-                      child: Icon(
+                      child: FaIcon(
                         FontAwesomeIcons.thumbtack,
                         size: 16,
                         color: theme.colorScheme.primary,
@@ -244,7 +244,7 @@ class ChatListItem extends StatelessWidget {
                     child: typingText.isNotEmpty
                         ? Padding(
                             padding: const EdgeInsets.only(right: 4.0),
-                            child: Icon(
+                            child: FaIcon(
                               FontAwesomeIcons.penToSquare,
                               color: theme.colorScheme.secondary,
                               size: 16,
@@ -266,7 +266,7 @@ class ChatListItem extends StatelessWidget {
                             child: Row(
                               mainAxisSize: .min,
                               children: [
-                                Icon(
+                                FaIcon(
                                   FontAwesomeIcons.comment,
                                   size: 12,
                                   color: theme.colorScheme.outline,

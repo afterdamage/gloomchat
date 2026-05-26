@@ -60,7 +60,7 @@ class SpacesPage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  FaIcon(
                     FontAwesomeIcons.globe,
                     size: 48,
                     color: theme.colorScheme.onSurface.withAlpha(100),

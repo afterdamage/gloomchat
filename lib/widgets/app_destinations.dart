@@ -4,7 +4,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 /// Represents a navigation destination in the app
 class AppDestination {
   final String id;
-  final IconData icon;
+  final FaIconData icon;
   final String Function(BuildContext) labelBuilder;
   final String route;
 

@@ -114,7 +114,7 @@ class ChatListHeader extends StatelessWidget implements PreferredSizeWidget {
                           )
                         : IconButton(
                             onPressed: controller.startSearch,
-                            icon: Icon(
+                            icon: FaIcon(
                               FontAwesomeIcons.magnifyingGlass,
                               color: theme.colorScheme.onPrimaryContainer,
                             ),

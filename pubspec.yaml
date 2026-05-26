@@ -4,7 +4,7 @@ publish_to: none
 # On version bump please also increase:
 # 1. The build number (for F-Droid)
 # 2. The version in /snap/snapcraft.yaml
-version: 2.4.0+3548
+version: 1.0.1+1
 
 environment:
   sdk: ">=3.10.0-0 <4.0.0"
@@ -42,7 +42,7 @@ dependencies:
   flutter_web_auth_2: ^5.0.1
   flutter_svg: ^2.0.10
   flutter_callkit_incoming: ^2.0.4+1
-  font_awesome_flutter: ^10.8.0
+  font_awesome_flutter: ^11.0.0
   flutter_webrtc: ^1.3.0
   geolocator: ^14.0.2
   go_router: ^17.1.0

@@ -80,7 +80,7 @@ class AppBottomBar extends StatelessWidget {
 
 /// A single tab item (Chats or Account) in the bottom bar.
 class _BottomBarTab extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final bool isActive;
   final Color activeColor;
@@ -112,7 +112,7 @@ class _BottomBarTab extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: color, size: 20),
+                FaIcon(icon, color: color, size: 20),
                 const SizedBox(height: 4),
                 Text(
                   label,

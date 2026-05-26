@@ -98,7 +98,7 @@ class _StreamView extends StatelessWidget {
             Positioned(
               left: 4.0,
               bottom: 4.0,
-              child: Icon(
+              child: FaIcon(
                 audioMuted ? FontAwesomeIcons.microphoneSlash : FontAwesomeIcons.microphone,
                 color: Colors.white,
                 size: 18.0,
@@ -400,7 +400,7 @@ class MyCallingPage extends State<Calling> {
       onPressed: _switchSpeaker,
       foregroundColor: _speakerOn ? Colors.black26 : Colors.white,
       backgroundColor: _speakerOn ? Colors.white : Colors.black45,
-      child: Icon(_speakerOn ? FontAwesomeIcons.volumeHigh : FontAwesomeIcons.volumeXmark),
+      child: FaIcon(_speakerOn ? FontAwesomeIcons.volumeHigh : FontAwesomeIcons.volumeXmark),
     );
     final hangupButton = FloatingActionButton(
       heroTag: 'hangup',
@@ -423,7 +423,7 @@ class MyCallingPage extends State<Calling> {
       onPressed: _muteMic,
       foregroundColor: isMicrophoneMuted ? Colors.black26 : Colors.white,
       backgroundColor: isMicrophoneMuted ? Colors.white : Colors.black45,
-      child: Icon(isMicrophoneMuted ? FontAwesomeIcons.microphoneSlash : FontAwesomeIcons.microphone),
+      child: FaIcon(isMicrophoneMuted ? FontAwesomeIcons.microphoneSlash : FontAwesomeIcons.microphone),
     );
 
     final screenSharingButton = FloatingActionButton(
@@ -447,7 +447,7 @@ class MyCallingPage extends State<Calling> {
       onPressed: _muteCamera,
       foregroundColor: isLocalVideoMuted ? Colors.black26 : Colors.white,
       backgroundColor: isLocalVideoMuted ? Colors.white : Colors.black45,
-      child: Icon(isLocalVideoMuted ? FontAwesomeIcons.videoSlash : FontAwesomeIcons.video),
+      child: FaIcon(isLocalVideoMuted ? FontAwesomeIcons.videoSlash : FontAwesomeIcons.video),
     );
 
     switch (_state) {
