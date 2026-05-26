@@ -289,7 +289,7 @@ class _AppNavRailFilterSection extends StatelessWidget {
 
   const _AppNavRailFilterSection({required this.extended});
 
-  static IconData _iconFor(ActiveFilter filter) {
+  static FaIconData _iconFor(ActiveFilter filter) {
     switch (filter) {
       case ActiveFilter.allChats:
         return FontAwesomeIcons.layerGroup;
@@ -353,7 +353,7 @@ class _AppNavRailFilterSection extends StatelessWidget {
 
 class _AppNavRailFilterRow extends StatelessWidget {
   final ActiveFilter filter;
-  final IconData icon;
+  final FaIconData icon;
   final bool isSelected;
   final bool extended;
   final VoidCallback onTap;

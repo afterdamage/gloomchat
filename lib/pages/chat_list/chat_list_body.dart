@@ -159,7 +159,7 @@ class ChatListViewBody extends StatelessWidget {
                                 DummyChatListItem(opacity: 0.3, animate: false),
                               ],
                             ),
-                            Icon(
+                            FaIcon(
                               FontAwesomeIcons.solidMessage,
                               size: 128,
                               color: theme.colorScheme.secondary,

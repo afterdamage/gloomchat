@@ -1,41 +1,27 @@
 name: gloomchat
 title: GloomChat
 base: core24
-version: 2.4.0
+version: 1.0.1
 license: AGPL-3.0
-summary: Secure messenger on the Matrix network
+summary: Dark, end-to-end encrypted Matrix messenger
 description: |
-  GloomChat is an open source, secure and decentralized Matrix messenger app. Easy to use with end-to-end encryption.
+  GloomChat is a dark, end-to-end encrypted messenger for the Matrix network.
 
+  Matrix is an open, decentralized protocol for real-time communication. You
+  choose your own homeserver — your account, contacts, and history live there,
+  not on anyone else's infrastructure.
 
   ## Features
 
-  - Send all kinds of messages, images and files
-  - Voice messages
+  - End-to-end encryption by default, with cross-signing and device verification
+  - UnifiedPush support for push notifications without Google Services
+  - Dracula-based dark theme with 7 accent color variants
+  - Voice and video calls via WebRTC
   - Location sharing
-  - Push notifications
-  - Unlimited private and public group chats
-  - Public channels with thousands of participants
-  - Feature rich group moderation including all matrix features
-  - Discover and join public groups
-  - Dark mode
-  - Hides complexity of Matrix IDs behind simple QR codes
-  - Custom emotes and stickers
-  - Video calls via sharing links to Jitsi
-  - Spaces
-  - Compatible with Element, Nheko, NeoChat and all other Matrix apps
-  - End to end encryption
-  - Emoji verification & cross signing
-  - And much more...
+  - File and media sharing
+  - No telemetry, no analytics, no account required with us
 
-
-  ## GloomChat comes with a dream
-
-  Imagine a world where everyone can choose the messenger they like and is still able to chat with all of their friends.
-
-  A world where there are no companies spying on you when you send selfies to friends and lovers.
-
-  And a world where apps are made for privacy, not for profit.
+  Compatible with Element, Nheko, NeoChat, SchildiChat, and all other Matrix clients.
 
   Source code: https://github.com/afterdamage/gloomchat
 

@@ -718,7 +718,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
 /// Large circular button used for Answer / Decline / Cancel / End.
 class _CallButton extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final Color backgroundColor;
   final VoidCallback onTap;
@@ -766,7 +766,7 @@ class _CallButton extends StatelessWidget {
 /// Smaller circular button used for Mute / Speaker / Camera / Flip in the
 /// connected-call controls row.
 class _ControlButton extends StatelessWidget {
-  final IconData icon;
+  final FaIconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;

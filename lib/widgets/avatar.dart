@@ -113,7 +113,7 @@ class Avatar extends StatelessWidget {
                       ),
                     )
                   : Center(
-                      child: Icon(
+                      child: FaIcon(
                         FontAwesomeIcons.user,
                         color: theme.colorScheme.tertiary,
                         size: size / 1.5,

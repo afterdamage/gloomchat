@@ -498,7 +498,7 @@ class ChatListController extends State<ChatList>
             child: Row(
               mainAxisSize: .min,
               children: [
-                Icon(
+                FaIcon(
                   room.pushRuleState == PushRuleState.notify
                       ? FontAwesomeIcons.bellSlash
                       : FontAwesomeIcons.bellSlash,
@@ -517,7 +517,7 @@ class ChatListController extends State<ChatList>
             child: Row(
               mainAxisSize: .min,
               children: [
-                Icon(
+                FaIcon(
                   room.markedUnread
                       ? FontAwesomeIcons.envelopeOpen
                       : FontAwesomeIcons.envelopeOpen,
@@ -536,7 +536,7 @@ class ChatListController extends State<ChatList>
             child: Row(
               mainAxisSize: .min,
               children: [
-                Icon(
+                FaIcon(
                   room.isFavourite ? FontAwesomeIcons.thumbtack : FontAwesomeIcons.thumbtack,
                 ),
                 const SizedBox(width: 12),
@@ -566,7 +566,7 @@ class ChatListController extends State<ChatList>
           child: Row(
             mainAxisSize: .min,
             children: [
-              Icon(
+              FaIcon(
                 FontAwesomeIcons.trash,
                 color: Theme.of(context).colorScheme.onErrorContainer,
               ),
@@ -588,7 +588,7 @@ class ChatListController extends State<ChatList>
             child: Row(
               mainAxisSize: .min,
               children: [
-                Icon(
+                FaIcon(
                   FontAwesomeIcons.ban,
                   color: Theme.of(context).colorScheme.onErrorContainer,
                 ),

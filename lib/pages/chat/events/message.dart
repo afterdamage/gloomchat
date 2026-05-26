@@ -328,7 +328,7 @@ class Message extends StatelessWidget {
                                       child: IconButton(
                                         padding: EdgeInsets.zero,
                                         tooltip: L10n.of(context).select,
-                                        icon: Icon(
+                                        icon: FaIcon(
                                           selected
                                               ? FontAwesomeIcons.solidCircleCheck
                                               : FontAwesomeIcons.circle,
@@ -345,7 +345,7 @@ class Message extends StatelessWidget {
                                           height: 16,
                                           child:
                                               event.status == EventStatus.error
-                                              ? const Icon(
+                                              ? const FaIcon(
                                                   FontAwesomeIcons.circleExclamation,
                                                   color: Colors.red,
                                                 )

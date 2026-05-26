@@ -77,7 +77,7 @@ class _DraculaThemeExampleState extends State<DraculaThemeExample> {
                           ),
                           const SizedBox(height: 4),
                           if (isSelected)
-                            const Icon(
+                            const FaIcon(
                               FontAwesomeIcons.solidCircleCheck,
                               color: Colors.black,
                               size: 20,

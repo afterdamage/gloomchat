@@ -81,3 +81,9 @@ assets/adi-registration.properties
 
 # Local Netlify folder
 .netlify
+
+# F-Droid submission drafts (local only)
+fastlane/
+
+# iOS ephemeral build artifacts
+ios/Flutter/ephemeral/

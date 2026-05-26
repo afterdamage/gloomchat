@@ -339,7 +339,7 @@ class _IncomingCallCardState extends State<IncomingCallCard>
 
 class _CardButton extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final FaIconData icon;
   final Color color;
   final VoidCallback onTap;
 

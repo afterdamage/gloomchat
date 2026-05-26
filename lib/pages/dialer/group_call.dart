@@ -87,7 +87,7 @@ class _ParticipantTile extends StatelessWidget {
                   if (audioMuted)
                     const Padding(
                       padding: EdgeInsets.only(right: 4),
-                      child: Icon(
+                      child: FaIcon(
                         FontAwesomeIcons.microphoneSlash,
                         color: Colors.redAccent,
                         size: 12,
@@ -278,7 +278,7 @@ class _GroupCallingState extends State<GroupCalling> {
         onPressed: _toggleMic,
         foregroundColor: _micMuted ? Colors.black26 : Colors.white,
         backgroundColor: _micMuted ? Colors.white : Colors.black45,
-        child: Icon(
+        child: FaIcon(
           _micMuted
               ? FontAwesomeIcons.microphoneSlash
               : FontAwesomeIcons.microphone,
@@ -289,7 +289,7 @@ class _GroupCallingState extends State<GroupCalling> {
         onPressed: _toggleCamera,
         foregroundColor: _camMuted ? Colors.black26 : Colors.white,
         backgroundColor: _camMuted ? Colors.white : Colors.black45,
-        child: Icon(
+        child: FaIcon(
           _camMuted ? FontAwesomeIcons.videoSlash : FontAwesomeIcons.video,
         ),
       ),
@@ -357,7 +357,7 @@ class _GroupCallingState extends State<GroupCalling> {
                     child: Row(
                       children: [
                         IconButton(
-                          icon: const Icon(
+                          icon: const FaIcon(
                             FontAwesomeIcons.arrowLeft,
                             color: Colors.white,
                           ),
