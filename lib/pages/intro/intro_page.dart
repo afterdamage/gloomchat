@@ -360,7 +360,7 @@ class _EyebrowBadgeState extends State<_EyebrowBadge>
             ),
             const SizedBox(width: 10),
             const Text(
-              'MATRIX-POWERED  ·  E2E ENCRYPTED  ·  DECENTRALIZED',
+              'MATRIX-POWERED  ·  DECENTRALIZED',
               style: TextStyle(
                 fontSize: 9,
                 letterSpacing: 2,
