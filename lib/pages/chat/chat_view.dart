@@ -20,7 +20,6 @@ import 'package:afterdamage/config/setting_keys.dart';
 import 'package:afterdamage/utils/account_config.dart';
 import 'package:afterdamage/utils/localized_exception_extension.dart';
 import 'package:afterdamage/utils/platform_infos.dart';
-import 'package:afterdamage/utils/voip_plugin.dart';
 import 'package:afterdamage/widgets/chat_settings_popup_menu.dart';
 import 'package:afterdamage/widgets/future_loading_dialog.dart';
 import 'package:afterdamage/widgets/matrix.dart';

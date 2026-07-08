@@ -12,7 +12,9 @@ import 'package:afterdamage/l10n/l10n.dart';
 import 'package:afterdamage/pages/dialer/call_screen.dart';
 import 'package:afterdamage/pages/dialer/incoming_call_card.dart';
 import 'package:afterdamage/theme/dracula_accents.dart';
-import 'package:afterdamage/utils/voip_plugin.dart';
+import 'package:afterdamage/utils/platform_infos.dart';
+import 'package:afterdamage/utils/voip/active_call_controller.dart';
+import 'package:afterdamage/utils/voip/remote_audio_player.dart';
 import 'package:afterdamage/widgets/app_lock.dart';
 import 'package:afterdamage/widgets/matrix.dart';
 import 'package:afterdamage/widgets/theme_builder.dart';
@@ -104,8 +106,17 @@ class GloomChatApp extends StatelessWidget {
 /// with route pushes. The call widget is wired directly to [activeCallNotifier],
 /// making it instantly and reliably reactive to incoming calls.
 ///
-/// * **Web column mode**: compact [IncomingCallCard] positioned bottom-right.
-/// * **All other cases (mobile, narrow web, desktop)**: full-screen [CallScreen].
+/// Layout behaviour (Discord model):
+/// * **Android / iOS and narrow windows (mobile web, small desktop windows)**:
+///   full-screen [CallScreen].
+/// * **Wide desktop & web (column mode)**: incoming calls show a compact
+///   [IncomingCallCard] bottom-right; outgoing/connected calls are handled by
+///   the sidebar "Voice Connected" panel and the expandable panel above the
+///   chat — navigation is never blocked.
+///
+/// Additionally mounts exactly ONE hidden [RemoteAudioPlayer] on web for the
+/// lifetime of the call, so remote audio always plays no matter which call
+/// surface is currently visible.
 class _CallScreenRoot extends StatefulWidget {
   final Widget? child;
   const _CallScreenRoot({this.child});
@@ -115,8 +126,8 @@ class _CallScreenRoot extends StatefulWidget {
 }
 
 class _CallScreenRootState extends State<_CallScreenRoot> {
-  ValueNotifier<ActiveCallState?>? _notifier;
-  // Track whether the web column-mode incoming card was dismissed per-call.
+  ValueNotifier<ActiveCallController?>? _notifier;
+  // Track whether the column-mode incoming card was dismissed per-call.
   bool _cardDismissed = false;
   String? _lastCallId;
 
@@ -147,8 +158,10 @@ class _CallScreenRootState extends State<_CallScreenRoot> {
 
   void _onClear() {
     final m = Matrix.of(context);
+    final controller = m.activeCallNotifier.value;
     m.activeCallNotifier.value = null;
     m.callExpandedNotifier.value = false;
+    controller?.dispose();
   }
 
   @override
@@ -157,26 +170,37 @@ class _CallScreenRootState extends State<_CallScreenRoot> {
     super.dispose();
   }
 
-  Widget? _buildCallWidget(BuildContext context, ActiveCallState activeCall) {
-    if (kIsWeb && GloomThemes.isColumnMode(context)) {
-      // Desktop web: incoming notification card; sidebar handles connected state.
-      if (activeCall.call.isOutgoing || _cardDismissed) return null;
+  Widget? _buildCallWidget(
+    BuildContext context,
+    ActiveCallController controller,
+  ) {
+    final discordLayout =
+        !PlatformInfos.isMobile && GloomThemes.isColumnMode(context);
+
+    if (discordLayout) {
+      // Wide desktop/web: incoming toast; the sidebar + expandable panel
+      // handle outgoing and connected calls without blocking navigation.
+      if (!controller.isIncomingRinging || _cardDismissed) return null;
       return Positioned(
         bottom: 24,
         right: 24,
         width: 300,
         child: IncomingCallCard(
-          call: activeCall.call,
-          client: activeCall.client,
-          onDismiss: () => setState(() => _cardDismissed = true),
+          key: ValueKey(controller.callId),
+          controller: controller,
+          onDismiss: () {
+            if (mounted) setState(() => _cardDismissed = true);
+          },
+          onAnswered: () =>
+              Matrix.of(context).callExpandedNotifier.value = true,
         ),
       );
     }
 
-    // Mobile + narrow web + desktop non-column: full-screen call screen.
+    // Mobile + narrow windows: full-screen call screen.
     return CallScreen(
-      call: activeCall.call,
-      client: activeCall.client,
+      key: ValueKey(controller.callId),
+      controller: controller,
       onClear: _onClear,
     );
   }
@@ -184,18 +208,30 @@ class _CallScreenRootState extends State<_CallScreenRoot> {
   @override
   Widget build(BuildContext context) {
     final baseChild = widget.child ?? const SizedBox.shrink();
-    final activeCall = _notifier?.value;
+    final controller = _notifier?.value;
 
-    if (activeCall == null) return baseChild;
+    if (controller == null) return baseChild;
 
-    final callWidget = _buildCallWidget(context, activeCall);
-    if (callWidget == null) return baseChild;
+    final callWidget = _buildCallWidget(context, controller);
 
     return Stack(
       fit: StackFit.expand,
       children: [
         baseChild,
-        callWidget,
+        // Single hidden audio sink for remote audio on web — mounted here so
+        // it survives switching between card / sidebar / full-screen views.
+        if (kIsWeb)
+          Positioned(
+            left: 0,
+            top: 0,
+            width: 1,
+            height: 1,
+            child: RemoteAudioPlayer(
+              key: ValueKey('audio-${controller.callId}'),
+              call: controller.call,
+            ),
+          ),
+        if (callWidget != null) callWidget,
       ],
     );
   }

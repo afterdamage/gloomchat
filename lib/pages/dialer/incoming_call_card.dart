@@ -1,36 +1,30 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc_impl
-    show navigator;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:matrix/matrix.dart';
 
-import 'package:afterdamage/l10n/l10n.dart';
 import 'package:afterdamage/theme/dracula_colors.dart';
-import 'package:afterdamage/utils/matrix_sdk_extensions/matrix_locals.dart';
+import 'package:afterdamage/utils/voip/active_call_controller.dart';
 import 'package:afterdamage/widgets/avatar.dart';
-import 'package:afterdamage/widgets/matrix.dart';
 
-/// Compact notification card for incoming calls on web desktop.
+/// Compact notification card for incoming calls on wide desktop/web layouts.
 ///
-/// Slides in from the bottom-right corner (like a system notification) when
-/// a call is ringing. Once the call transitions out of the ringing state the
-/// card slides back out — the sidebar panel takes over for connected calls.
+/// Slides in from the bottom-right corner (like a Discord call toast) while
+/// the call is ringing. Once the call leaves the ringing state the card
+/// slides back out — the sidebar panel takes over for connected calls.
 class IncomingCallCard extends StatefulWidget {
-  final CallSession call;
-  final Client client;
+  final ActiveCallController controller;
 
-  /// Called when the card should be removed (call answered, declined, or timed out).
+  /// Called when the card should be removed (call answered, declined, ended).
   final VoidCallback? onDismiss;
 
+  /// Called after the user answers from this card (e.g. to expand the panel).
+  final VoidCallback? onAnswered;
+
   const IncomingCallCard({
-    required this.call,
-    required this.client,
+    required this.controller,
     this.onDismiss,
+    this.onAnswered,
     super.key,
   });
 
@@ -40,17 +34,14 @@ class IncomingCallCard extends StatefulWidget {
 
 class _IncomingCallCardState extends State<IncomingCallCard>
     with TickerProviderStateMixin {
-  CallSession get call => widget.call;
+  ActiveCallController get controller => widget.controller;
 
   late final AnimationController _slideController;
   late final Animation<Offset> _slideAnimation;
   late final Animation<double> _fadeAnimation;
-
-  StreamSubscription? _stateSub;
-  bool _dismissing = false;
-
-  // Pulse animation for the ringing ring
   late final AnimationController _pulseController;
+
+  bool _dismissing = false;
 
   @override
   void initState() {
@@ -60,32 +51,30 @@ class _IncomingCallCardState extends State<IncomingCallCard>
       vsync: this,
       duration: const Duration(milliseconds: 320),
     );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic));
-
-    _fadeAnimation = CurvedAnimation(parent: _slideController, curve: Curves.easeOut);
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+    );
+    _fadeAnimation =
+        CurvedAnimation(parent: _slideController, curve: Curves.easeOut);
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat();
 
-    // Slide in immediately
     _slideController.forward();
-
-    // Vibrate to notify user of incoming call
     HapticFeedback.heavyImpact();
 
-    _stateSub = call.onCallStateChanged.stream.listen(_onStateChanged);
+    controller.addListener(_onControllerChanged);
   }
 
-  void _onStateChanged(CallState state) {
-    if (state == CallState.kRinging) return; // stay visible
+  void _onControllerChanged() {
+    if (!mounted) return;
     // Any non-ringing state means the call was answered or ended — dismiss.
-    _dismiss();
+    if (!controller.isIncomingRinging) {
+      _dismiss();
+    }
   }
 
   void _dismiss() {
@@ -98,68 +87,22 @@ class _IncomingCallCardState extends State<IncomingCallCard>
 
   @override
   void dispose() {
-    _stateSub?.cancel();
+    controller.removeListener(_onControllerChanged);
     _slideController.dispose();
     _pulseController.dispose();
     super.dispose();
   }
 
-  String get _callerName {
-    if (call.room.isDirectChat) {
-      final userId = call.room.directChatMatrixID ?? '';
-      final user = call.room.unsafeGetUserFromMemoryOrFallback(userId);
-      return user.displayName ?? user.id;
-    }
-    return call.room.getLocalizedDisplayname(MatrixLocals(L10n.of(context)));
-  }
-
-  Uri? get _callerAvatar {
-    if (call.room.isDirectChat) {
-      final userId = call.room.directChatMatrixID ?? '';
-      return call.room.unsafeGetUserFromMemoryOrFallback(userId).avatarUrl;
-    }
-    return null;
-  }
-
-  bool get _isVideoCall => call.type == CallType.kVideo;
-
   Future<void> _answer() async {
     HapticFeedback.mediumImpact();
-    if (kIsWeb) {
-      try {
-        final constraints = <String, dynamic>{
-          'audio': true,
-          'video': _isVideoCall,
-        };
-        final realStream =
-            await webrtc_impl.navigator.mediaDevices.getUserMedia(constraints);
-        final audioTracks = realStream.getAudioTracks();
-        if (audioTracks.isNotEmpty) {
-          final placeholder = call.localUserMediaStream;
-          if (placeholder != null) await call.removeLocalStream(placeholder);
-          await call.addLocalStream(realStream, SDPStreamMetadataPurpose.Usermedia);
-          final voipPlugin = Matrix.of(context).voipPlugin;
-          voipPlugin?.mediaDevicesWrapper?.usedPlaceholder = false;
-        }
-      } catch (e) {
-        Logs().w('[IncomingCallCard] Failed to get real media: $e');
-      }
-    }
-    try {
-      await call.answer();
-    } catch (e) {
-      Logs().w('[IncomingCallCard] answer error: $e');
-    }
+    await controller.answer();
+    widget.onAnswered?.call();
     _dismiss();
   }
 
-  void _decline() {
+  Future<void> _decline() async {
     HapticFeedback.mediumImpact();
-    try {
-      call.reject();
-    } catch (e) {
-      Logs().w('[IncomingCallCard] reject error: $e');
-    }
+    await controller.reject();
     _dismiss();
   }
 
@@ -197,14 +140,18 @@ class _IncomingCallCardState extends State<IncomingCallCard>
             Row(
               children: [
                 FaIcon(
-                  _isVideoCall ? FontAwesomeIcons.video : FontAwesomeIcons.phone,
+                  controller.isVideoCall
+                      ? FontAwesomeIcons.video
+                      : FontAwesomeIcons.phone,
                   color: DraculaColors.green,
                   size: 12,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _isVideoCall ? 'Incoming video call' : 'Incoming voice call',
-                  style: TextStyle(
+                  controller.isVideoCall
+                      ? 'Incoming video call'
+                      : 'Incoming voice call',
+                  style: const TextStyle(
                     color: DraculaColors.muted,
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
@@ -245,7 +192,6 @@ class _IncomingCallCardState extends State<IncomingCallCard>
             // Avatar + name row
             Row(
               children: [
-                // Avatar with animated ring
                 AnimatedBuilder(
                   animation: _pulseController,
                   builder: (_, child) {
@@ -266,10 +212,10 @@ class _IncomingCallCardState extends State<IncomingCallCard>
                   },
                   child: ClipOval(
                     child: Avatar(
-                      mxContent: _callerAvatar,
-                      name: _callerName,
+                      mxContent: controller.avatarUrl,
+                      name: controller.displayName,
                       size: 52,
-                      client: widget.client,
+                      client: controller.client,
                     ),
                   ),
                 ),
@@ -279,7 +225,7 @@ class _IncomingCallCardState extends State<IncomingCallCard>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _callerName,
+                        controller.displayName,
                         style: const TextStyle(
                           color: DraculaColors.foreground,
                           fontSize: 15,
@@ -290,10 +236,8 @@ class _IncomingCallCardState extends State<IncomingCallCard>
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        call.room.getLocalizedDisplayname(
-                          MatrixLocals(L10n.of(context)),
-                        ),
-                        style: TextStyle(
+                        controller.call.room.getLocalizedDisplayname(),
+                        style: const TextStyle(
                           color: DraculaColors.muted,
                           fontSize: 11,
                         ),

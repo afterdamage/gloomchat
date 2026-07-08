@@ -1,46 +1,30 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import 'package:flutter_webrtc/flutter_webrtc.dart' hide VideoRenderer;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:just_audio/just_audio.dart';
-import 'package:matrix/matrix.dart';
-import 'package:wakelock_plus/wakelock_plus.dart';
 
 import 'package:afterdamage/l10n/l10n.dart';
-import 'package:afterdamage/utils/matrix_sdk_extensions/matrix_locals.dart';
 import 'package:afterdamage/utils/platform_infos.dart';
-import 'package:afterdamage/utils/voip/remote_audio_player.dart';
+import 'package:afterdamage/utils/voip/active_call_controller.dart';
 import 'package:afterdamage/utils/voip/video_renderer.dart';
 import 'package:afterdamage/widgets/avatar.dart';
 
 /// Full-screen call UI — incoming, outgoing, and active calls.
-/// Shown via a [Stack] inside [AppNavigationShell] on mobile and as
-/// a centred overlay on desktop/web. This widget owns no overlays of
-/// its own; the parent is responsible for mounting/unmounting it.
+///
+/// Used on mobile and on narrow windows (mobile web, small desktop windows).
+/// Pure view: all state, sounds and actions live on [ActiveCallController].
 class CallScreen extends StatefulWidget {
-  final CallSession call;
-  final Client client;
+  final ActiveCallController controller;
 
-  /// Called when the call screen should be dismissed (e.g. call ended and the
-  /// 2-second grace period has elapsed, or the user taps the minimise button
-  /// on desktop).
+  /// Called when the call screen should be dismissed (call ended and the
+  /// grace period has elapsed).
   final VoidCallback? onClear;
 
-  /// Whether to render the call screen's own top bar.
-  /// Set to [false] when the screen is embedded inside a windowed container
-  /// (e.g. the floating Discord-style window on web) that provides its own
-  /// title bar and drag handle.
-  final bool showTopBar;
-
   const CallScreen({
-    required this.call,
-    required this.client,
+    required this.controller,
     this.onClear,
-    this.showTopBar = true,
     super.key,
   });
 
@@ -49,18 +33,11 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
-  CallSession get call => widget.call;
+  ActiveCallController get controller => widget.controller;
 
-  CallState? _state;
-  DateTime? _connectedAt;
-  Duration _callDuration = Duration.zero;
-  Timer? _durationTimer;
-  bool _isMicMuted = false;
-  bool _isCamMuted = false;
-  bool _speakerOn = false;
   bool _controlsVisible = true;
   Timer? _controlsHideTimer;
-  AudioPlayer? _dialupPlayer;
+  Timer? _dismissTimer;
 
   late final AnimationController _ringController;
   late final AnimationController _entryController;
@@ -69,19 +46,14 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _state = call.state;
-    _isMicMuted = call.isMicrophoneMuted;
-    _isCamMuted = call.isLocalVideoMuted;
 
-    // Slide-up entry animation (mobile/PWA full-screen).
+    // Slide-up entry animation.
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
       CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
     );
     _entryController.forward();
@@ -91,85 +63,31 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
       duration: const Duration(milliseconds: 1800),
     )..repeat();
 
-    call.onCallStateChanged.stream.listen(_onCallStateChanged);
-    call.onCallEventChanged.stream.listen((e) {
-      if (e == CallStateChange.kFeedsChanged && mounted) {
-        setState(() => call.tryRemoveStopedStreams());
-      }
-    });
-
-    if (_state == CallState.kConnected) {
-      _connectedAt = DateTime.now();
-      _startTimer();
-      _ringController.stop();
-      if (call.type == CallType.kVideo) _scheduleHideControls();
-    }
-    if (call.type == CallType.kVideo) {
-      WakelockPlus.enable().ignore();
-    }
-
-    // Play ringback tone while waiting for the remote party to answer.
-    if (call.isOutgoing) {
-      _playDialupTone();
-    }
+    controller.addListener(_onControllerChanged);
+    _syncWithController();
   }
 
-  void _playDialupTone() async {
-    if (!kIsWeb && !PlatformInfos.isMobile && !PlatformInfos.isMacOS) return;
-    try {
-      final player = AudioPlayer();
-      _dialupPlayer = player;
-      await player.setAsset('assets/sounds/dialup.ogg');
-      await player.play();
-    } catch (e) {
-      Logs().w('[CallScreen] Failed to play dial-up tone: $e');
-    }
-  }
-
-  void _stopDialupTone() {
-    _dialupPlayer?.stop();
-    _dialupPlayer?.dispose();
-    _dialupPlayer = null;
-  }
-
-  void _onCallStateChanged(CallState state) {
+  void _onControllerChanged() {
     if (!mounted) return;
-    setState(() {
-      _state = state;
-      _isMicMuted = call.isMicrophoneMuted;
-      _isCamMuted = call.isLocalVideoMuted;
-    });
+    setState(_syncWithController);
+  }
 
-    if (state == CallState.kConnected && _connectedAt == null) {
-      HapticFeedback.mediumImpact();
-      _stopDialupTone();
-      setState(() {
-        _connectedAt = DateTime.now();
-      });
+  void _syncWithController() {
+    if (controller.isConnected || controller.isEnded) {
       _ringController.stop();
-      _startTimer();
-      if (call.type == CallType.kVideo) _scheduleHideControls();
+    } else if (!_ringController.isAnimating) {
+      _ringController.repeat();
     }
-
-    if (state == CallState.kEnded || state == CallState.kEnding) {
-      HapticFeedback.heavyImpact();
-      _stopDialupTone();
-      _durationTimer?.cancel();
-      _ringController.stop();
-      Timer(const Duration(seconds: 2), () {
+    if (controller.isEnded && _dismissTimer == null) {
+      _dismissTimer = Timer(const Duration(seconds: 2), () {
         if (mounted) widget.onClear?.call();
       });
     }
-  }
-
-  void _startTimer() {
-    _durationTimer?.cancel();
-    _durationTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      setState(() {
-        _callDuration = DateTime.now().difference(_connectedAt!);
-      });
-    });
+    if (controller.isConnected &&
+        controller.isVideoCall &&
+        _controlsHideTimer == null) {
+      _scheduleHideControls();
+    }
   }
 
   void _scheduleHideControls() {
@@ -186,213 +104,67 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
+    controller.removeListener(_onControllerChanged);
     _entryController.dispose();
     _ringController.dispose();
-    _durationTimer?.cancel();
     _controlsHideTimer?.cancel();
-    _stopDialupTone();
-    if (call.type == CallType.kVideo) {
-      WakelockPlus.disable().ignore();
-    }
+    _dismissTimer?.cancel();
     super.dispose();
-  }
-
-  // ── Actions ──────────────────────────────────────────────────────────────
-
-  Future<void> _answer() async {
-    try {
-      await call.answer();
-    } catch (e) {
-      Logs().w('[CallScreen] answer error: $e');
-    }
-    if (mounted) setState(() {});
-  }
-
-  void _decline() {
-    try {
-      call.reject();
-    } catch (e) {
-      Logs().w('[CallScreen] reject error: $e');
-    }
-  }
-
-  void _hangUp() {
-    try {
-      if (call.isRinging && !call.isOutgoing) {
-        call.reject();
-      } else {
-        call.hangup(reason: CallErrorCode.userHangup);
-      }
-    } catch (e) {
-      Logs().w('[CallScreen] hangup error: $e');
-    }
-  }
-
-  Future<void> _toggleMic() async {
-    try {
-      await call.setMicrophoneMuted(!call.isMicrophoneMuted);
-    } catch (e) {
-      Logs().w('[CallScreen] setMicrophoneMuted error: $e');
-    }
-    if (mounted) setState(() => _isMicMuted = call.isMicrophoneMuted);
-  }
-
-  Future<void> _toggleCamera() async {
-    try {
-      await call.setLocalVideoMuted(!call.isLocalVideoMuted);
-    } catch (e) {
-      Logs().w('[CallScreen] setLocalVideoMuted error: $e');
-    }
-    if (mounted) setState(() => _isCamMuted = call.isLocalVideoMuted);
-  }
-
-  Future<void> _toggleSpeaker() async {
-    _speakerOn = !_speakerOn;
-    try {
-      await Helper.setSpeakerphoneOn(_speakerOn);
-    } catch (e) {
-      Logs().w('[CallScreen] setSpeakerphoneOn error: $e');
-    }
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _flipCamera() async {
-    final tracks = call.localUserMediaStream?.stream?.getVideoTracks();
-    if (tracks != null && tracks.isNotEmpty) {
-      try {
-        await Helper.switchCamera(tracks.first);
-      } catch (e) {
-        Logs().w('[CallScreen] switchCamera error: $e');
-      }
-    }
-  }
-
-  // ── Derived helpers ───────────────────────────────────────────────────────
-
-  bool get _isIncomingRinging =>
-      !call.isOutgoing &&
-      (_state == CallState.kRinging || _state == CallState.kFledgling);
-  bool get _isConnected => _state == CallState.kConnected;
-  bool get _isEnded =>
-      _state == CallState.kEnded || _state == CallState.kEnding;
-  bool get _isVideoCall => call.type == CallType.kVideo;
-  bool get _isVoiceOnly => call.type == CallType.kVoice;
-
-  WrappedMediaStream? get _remoteStream =>
-      call.remoteUserMediaStream ?? call.remoteScreenSharingStream;
-  WrappedMediaStream? get _localStream => call.localUserMediaStream;
-
-  String get _callerName {
-    if (call.room.isDirectChat) {
-      final userId = call.room.directChatMatrixID ?? '';
-      final user = call.room.unsafeGetUserFromMemoryOrFallback(userId);
-      return user.displayName ?? user.id;
-    }
-    return call.room.getLocalizedDisplayname(
-      MatrixLocals(L10n.of(context)),
-    );
-  }
-
-  Uri? get _callerAvatar {
-    if (call.room.isDirectChat) {
-      final userId = call.room.directChatMatrixID ?? '';
-      return call.room.unsafeGetUserFromMemoryOrFallback(userId).avatarUrl;
-    }
-    return call.room
-        .getState(EventTypes.RoomAvatar)
-        ?.content
-        .tryGet<Uri>('url');
-  }
-
-  String _formatDuration(Duration d) {
-    final h = d.inHours;
-    final m = d.inMinutes.remainder(60).toString().padLeft(2, '0');
-    final s = d.inSeconds.remainder(60).toString().padLeft(2, '0');
-    return h > 0 ? '$h:$m:$s' : '$m:$s';
-  }
-
-  String get _statusLabel {
-    if (_isEnded) return 'Call ended';
-    if (_isConnected) return _formatDuration(_callDuration);
-    if (_isIncomingRinging) {
-      return _isVideoCall ? 'Incoming video call' : 'Incoming voice call';
-    }
-    switch (_state) {
-      case CallState.kInviteSent:
-      case CallState.kCreateOffer:
-        return 'Calling…';
-      case CallState.kRinging:
-        return 'Ringing…';
-      case CallState.kCreateAnswer:
-      case CallState.kConnecting:
-        return 'Connecting…';
-      default:
-        return 'Setting up…';
-    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // For video calls show the video as the background when connected.
-    final showVideoBackground = _isConnected &&
-        _isVideoCall &&
-        _remoteStream != null &&
-        !_remoteStream!.videoMuted;
+    // For video calls show the remote video as the background when connected.
+    final showVideoBackground = controller.isConnected &&
+        controller.isVideoCall &&
+        controller.hasRemoteVideo;
 
     return SlideTransition(
       position: _slideAnimation,
       child: Material(
-      color: Colors.black,
-      child: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: showVideoBackground ? _revealControls : null,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // ── Background ──────────────────────────────────────────────
-            if (showVideoBackground)
-              VideoRenderer(
-                _remoteStream!,
-                mirror: false,
-                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-              )
-            else
-              _buildGradientBackground(),
+        color: Colors.black,
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: showVideoBackground ? _revealControls : null,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // ── Background ──────────────────────────────────────────────
+              if (showVideoBackground)
+                VideoRenderer(
+                  controller.remoteStream!,
+                  mirror: false,
+                  fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                )
+              else
+                _buildGradientBackground(),
 
-            // ── Hidden audio engine (web only) ───────────────────────────
-            Positioned(
-              width: 0,
-              height: 0,
-              child: RemoteAudioPlayer(call: call),
-            ),
-
-            // ── Main chrome (top + centre + bottom) ──────────────────────
-            AnimatedOpacity(
-              opacity: showVideoBackground && !_controlsVisible ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 300),
-              child: SafeArea(
-                child: Column(
-                  children: [
-                    _buildTopBar(),
-                    Expanded(child: _buildCenter(showVideoBackground)),
-                    _buildBottomControls(),
-                  ],
+              // ── Main chrome (top + centre + bottom) ──────────────────────
+              AnimatedOpacity(
+                opacity: showVideoBackground && !_controlsVisible ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 300),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      _buildTopBar(),
+                      Expanded(child: _buildCenter(showVideoBackground)),
+                      _buildBottomControls(),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // ── Local video PiP (video calls only) ────────────────────────
-            if (_isConnected && _isVideoCall) _buildLocalPip(),
-          ],
+              // ── Local video PiP (video calls only) ────────────────────────
+              if (controller.isConnected && controller.isVideoCall)
+                _buildLocalPip(),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
-
-  // ── Background ────────────────────────────────────────────────────────────
 
   Widget _buildGradientBackground() {
     return Container(
@@ -406,17 +178,17 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Top bar ───────────────────────────────────────────────────────────────
-
   Widget _buildTopBar() {
-    if (!widget.showTopBar) return const SizedBox.shrink();
+    final title = controller.isIncomingRinging
+        ? (controller.isVideoCall ? 'Incoming video call' : 'Incoming call')
+        : (controller.isVideoCall ? 'Video call' : 'Voice call');
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
-          // Only show a close/minimise button when the call has ended
-          // (otherwise the user can't accidentally leave an active call).
-          if (_isEnded)
+          // Only show a close button when the call has ended (otherwise the
+          // user can't accidentally leave an active call).
+          if (controller.isEnded)
             IconButton(
               icon: const FaIcon(FontAwesomeIcons.chevronLeft, size: 16),
               color: Colors.white70,
@@ -424,30 +196,21 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             )
           else
             const SizedBox(width: 48),
-
           const Spacer(),
-
           Text(
-            call.isOutgoing
-                ? (_isVideoCall ? 'Video call' : 'Voice call')
-                : (_isIncomingRinging
-                    ? (_isVideoCall ? 'Incoming video call' : 'Incoming call')
-                    : (_isVideoCall ? 'Video call' : 'Voice call')),
+            title,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const Spacer(),
           const SizedBox(width: 48),
         ],
       ),
     );
   }
-
-  // ── Centre ───────────────────────────────────────────────────────────────
 
   Widget _buildCenter(bool overlaidOnVideo) {
     if (overlaidOnVideo) {
@@ -457,7 +220,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           child: Text(
-            _callerName,
+            controller.displayName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 26,
@@ -474,24 +237,22 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Animated ring behind avatar when incoming call is ringing.
+        // Animated rings behind the avatar while ringing.
         SizedBox(
           width: 160,
           height: 160,
           child: Stack(
             alignment: Alignment.center,
             children: [
-              if (_isIncomingRinging)
+              if (controller.isIncomingRinging)
                 AnimatedBuilder(
                   animation: _ringController,
                   builder: (context, _) {
                     final t = _ringController.value;
-                    // Outer ring — slightly delayed phase
                     final t2 = (t + 0.35) % 1.0;
                     return Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Inner ring
                         Container(
                           width: 130 + t * 30,
                           height: 130 + t * 30,
@@ -505,7 +266,6 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        // Outer ring (offset phase)
                         Container(
                           width: 130 + t2 * 30,
                           height: 130 + t2 * 30,
@@ -523,7 +283,6 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
                     );
                   },
                 ),
-              // Avatar
               Container(
                 width: 110,
                 height: 110,
@@ -539,24 +298,21 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
                 ),
                 child: ClipOval(
                   child: Avatar(
-                    mxContent: _callerAvatar,
-                    name: _callerName,
+                    mxContent: controller.avatarUrl,
+                    name: controller.displayName,
                     size: 110,
-                    client: widget.client,
+                    client: controller.client,
                   ),
                 ),
               ),
             ],
           ),
         ),
-
         const SizedBox(height: 20),
-
-        // Caller name
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Text(
-            _callerName,
+            controller.displayName,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 30,
@@ -566,14 +322,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             maxLines: 2,
           ),
         ),
-
         const SizedBox(height: 10),
-
-        // Status / timer
         Text(
-          _statusLabel,
+          controller.statusLabel,
           style: TextStyle(
-            color: _isEnded ? Colors.white38 : Colors.white60,
+            color: controller.isEnded ? Colors.white38 : Colors.white60,
             fontSize: 16,
           ),
         ),
@@ -581,13 +334,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Bottom controls ───────────────────────────────────────────────────────
-
   Widget _buildBottomControls() {
-    if (_isEnded) return const SizedBox(height: 80);
+    if (controller.isEnded) return const SizedBox(height: 80);
 
     // ── INCOMING RINGING: big Decline + Answer buttons ─────────────────────
-    if (_isIncomingRinging) {
+    if (controller.isIncomingRinging) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(40, 16, 40, 48),
         child: Row(
@@ -597,13 +348,13 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
               icon: FontAwesomeIcons.phoneSlash,
               label: 'Decline',
               backgroundColor: const Color(0xFFE53935),
-              onTap: _decline,
+              onTap: controller.reject,
             ),
             _CallButton(
               icon: FontAwesomeIcons.phone,
               label: 'Answer',
               backgroundColor: const Color(0xFF43A047),
-              onTap: _answer,
+              onTap: controller.answer,
             ),
           ],
         ),
@@ -611,7 +362,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     }
 
     // ── OUTGOING / PRE-CONNECT: single Cancel button ────────────────────────
-    if (!_isConnected) {
+    if (!controller.isConnected) {
       return Padding(
         padding: const EdgeInsets.fromLTRB(40, 16, 40, 48),
         child: Center(
@@ -619,7 +370,7 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
             icon: FontAwesomeIcons.phoneSlash,
             label: L10n.of(context).cancel,
             backgroundColor: const Color(0xFFE53935),
-            onTap: _hangUp,
+            onTap: controller.hangUp,
           ),
         ),
       );
@@ -642,45 +393,45 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _ControlButton(
-            icon: _isMicMuted
+            icon: controller.isMicrophoneMuted
                 ? FontAwesomeIcons.microphoneSlash
                 : FontAwesomeIcons.microphone,
-            label: _isMicMuted ? 'Unmute' : 'Mute',
-            active: _isMicMuted,
-            onTap: _toggleMic,
+            label: controller.isMicrophoneMuted ? 'Unmute' : 'Mute',
+            active: controller.isMicrophoneMuted,
+            onTap: controller.toggleMicrophone,
           ),
-          if (!kIsWeb && _isVoiceOnly)
+          if (PlatformInfos.isMobile && controller.voiceOnly)
             _ControlButton(
-              icon: _speakerOn
+              icon: controller.speakerOn
                   ? FontAwesomeIcons.volumeHigh
                   : FontAwesomeIcons.phone,
               label: 'Speaker',
-              active: _speakerOn,
-              onTap: _toggleSpeaker,
+              active: controller.speakerOn,
+              onTap: controller.toggleSpeaker,
             ),
-          if (_isVideoCall) ...[
+          if (controller.isVideoCall) ...[
             _ControlButton(
-              icon: _isCamMuted
+              icon: controller.isLocalVideoMuted
                   ? FontAwesomeIcons.videoSlash
                   : FontAwesomeIcons.video,
-              label: _isCamMuted ? 'Cam off' : 'Camera',
-              active: _isCamMuted,
-              onTap: _toggleCamera,
+              label: controller.isLocalVideoMuted ? 'Cam off' : 'Camera',
+              active: controller.isLocalVideoMuted,
+              onTap: controller.toggleCamera,
             ),
-            if (!kIsWeb)
+            if (PlatformInfos.isMobile)
               _ControlButton(
                 icon: FontAwesomeIcons.arrowsRotate,
                 label: 'Flip',
                 active: false,
-                onTap: _flipCamera,
+                onTap: controller.flipCamera,
               ),
           ],
-          // End-call button — always present + most prominent
+          // End-call button — always present + most prominent.
           _CallButton(
             icon: FontAwesomeIcons.phoneSlash,
             label: 'End',
             backgroundColor: const Color(0xFFE53935),
-            onTap: _hangUp,
+            onTap: controller.hangUp,
             size: 64,
           ),
         ],
@@ -688,11 +439,11 @@ class _CallScreenState extends State<CallScreen> with TickerProviderStateMixin {
     );
   }
 
-  // ── Local PiP ─────────────────────────────────────────────────────────────
-
   Widget _buildLocalPip() {
-    final localStream = _localStream;
-    if (localStream == null || _isCamMuted) return const SizedBox.shrink();
+    final localStream = controller.localStream;
+    if (localStream == null || controller.isLocalVideoMuted) {
+      return const SizedBox.shrink();
+    }
 
     return Positioned(
       top: 80,
@@ -756,8 +507,10 @@ class _CallButton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 13),
+        ),
       ],
     );
   }
@@ -806,8 +559,10 @@ class _ControlButton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        Text(label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.white70, fontSize: 11),
+        ),
       ],
     );
   }

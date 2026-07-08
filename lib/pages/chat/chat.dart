@@ -1354,8 +1354,10 @@ class ChatController extends State<ChatPageWithRoom>
     final voipPlugin = Matrix.of(context).voipPlugin;
     if (voipPlugin == null) return;
 
-    // Block starting a new call if one is already active
-    if (voipPlugin.activeCallNotifier.value != null) {
+    // Block starting a new call if one is already active. A call lingering
+    // in its ended "grace period" must not block new calls.
+    final activeCall = voipPlugin.activeCallNotifier.value;
+    if (activeCall != null && !activeCall.isEnded) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('There is already an active call')),
       );
@@ -1409,6 +1411,10 @@ class ChatController extends State<ChatPageWithRoom>
         callType,
         userId: room.directChatMatrixID,
       );
+      // Discord behaviour on wide layouts: show the call panel above the
+      // chat right away (the panel only renders in the wide shell, so this
+      // is a no-op on mobile/narrow layouts).
+      voipPlugin.callExpandedNotifier.value = true;
     } catch (e, s) {
       Logs().e('Failed to start call', e, s);
       if (!mounted) return;

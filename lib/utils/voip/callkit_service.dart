@@ -115,6 +115,16 @@ class CallkitService {
     await FlutterCallkitIncoming.startCall(params);
   }
 
+  /// Mark the call as connected so the native UI starts its timer.
+  Future<void> setConnected(String callId) async {
+    if (!isSupported) return;
+    try {
+      await FlutterCallkitIncoming.setCallConnected(callId);
+    } catch (e) {
+      Logs().w('[VOIP] setCallConnected failed: $e');
+    }
+  }
+
   /// Dismiss the native call screen.
   Future<void> endCall(String callId) async {
     if (!isSupported) return;

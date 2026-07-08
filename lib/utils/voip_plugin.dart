@@ -13,25 +13,19 @@ import 'package:webrtc_interface/webrtc_interface.dart' hide Navigator;
 import 'package:afterdamage/pages/chat_list/chat_list.dart';
 import 'package:afterdamage/pages/dialer/group_call.dart';
 import 'package:afterdamage/utils/platform_infos.dart';
+import 'package:afterdamage/utils/voip/active_call_controller.dart';
+import 'package:afterdamage/utils/voip/call_sounds.dart';
 import 'package:afterdamage/utils/voip/callkit_events.dart' as ck;
 import 'package:afterdamage/utils/voip/callkit_service.dart';
 import 'package:afterdamage/utils/voip/web_media_fixer.dart';
-import '../../utils/voip/user_media_manager.dart';
 import '../widgets/matrix.dart';
 
-/// Holds the state of an active 1:1 call for the banner UI.
-class ActiveCallState {
-  final String callId;
-  final CallSession call;
-  final Client client;
-
-  const ActiveCallState({
-    required this.callId,
-    required this.call,
-    required this.client,
-  });
-}
-
+/// WebRTC delegate for the Matrix SDK.
+///
+/// Owns the [VoIP] instance and publishes exactly one [ActiveCallController]
+/// per 1:1 call via [activeCallNotifier]. All call UI (full-screen screen,
+/// sidebar panel, incoming card) renders from that controller — this class
+/// never builds widgets itself.
 class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
   final MatrixState matrix;
   Client get client => matrix.client;
@@ -47,27 +41,24 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
     }
   }
   bool background = false;
-  bool speakerOn = false;
   late VoIP voip;
-  OverlayEntry? overlayEntry; // legacy — kept for API compatibility, not used
   StreamSubscription<ck.CallEvent?>? _callkitEventSub;
   BuildContext get context => matrix.context;
 
-  /// Wrapper that catches getUserMedia permission errors on web so incoming
-  /// calls can reach the "Ringing" state without being killed.
-  late final WebMediaDevicesWrapper _webMediaDevices =
+  /// Wraps getUserMedia so a permission/missing-device error on web and
+  /// desktop returns a silent placeholder stream instead of killing the
+  /// incoming call before its UI ever appears (the SDK requests media
+  /// *before* handleNewCall fires). The real stream is swapped in by
+  /// [ActiveCallController.answer].
+  late final WebMediaDevicesWrapper _mediaDevicesWrapper =
       WebMediaDevicesWrapper(webrtc_impl.navigator.mediaDevices);
 
-  /// Expose the wrapper so call UI can check if a placeholder was used.
-  WebMediaDevicesWrapper? get mediaDevicesWrapper =>
-      kIsWeb ? _webMediaDevices : null;
-
-  /// Notifier for the active 1:1 call. Delegates to [MatrixState.activeCallNotifier]
-  /// so the overlay is always wired up even before [VoipPlugin] is created.
-  ValueNotifier<ActiveCallState?> get activeCallNotifier =>
+  /// The active 1:1 call, or null. Lives on [MatrixState] so the overlay is
+  /// wired up even before this plugin exists.
+  ValueNotifier<ActiveCallController?> get activeCallNotifier =>
       matrix.activeCallNotifier;
 
-  /// Whether the floating call panel (video pop-out) is expanded.
+  /// Whether the Discord-style panel above the chat is expanded.
   ValueNotifier<bool> get callExpandedNotifier => matrix.callExpandedNotifier;
 
   void dispose() {
@@ -76,10 +67,14 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
     }
     _callkitEventSub?.cancel();
     _callkitEventSub = null;
+    _publish(null);
+    // The controller only stops sounds on state transitions — a mid-call
+    // teardown (logout / client switch) must silence them explicitly.
+    CallSounds.instance.stop();
   }
 
-  /// Listens to native call UI events (Accept / Decline / End) from
-  /// flutter_callkit_incoming and forwards them to the active CallSession.
+  /// Forwards native call UI events (Accept / Decline / End) from
+  /// flutter_callkit_incoming to the matching call controller.
   void _listenCallkitEvents() {
     _callkitEventSub = ck.FlutterCallkitIncoming.onEvent.listen((event) async {
       if (event == null) return;
@@ -88,11 +83,8 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
       final callId = body['id'] as String?;
       if (callId == null) return;
 
-      // Find the matching call session by callId.
-      final call = voip.calls.values
-          .where((c) => c.callId == callId)
-          .firstOrNull;
-      if (call == null) {
+      final controller = activeCallNotifier.value;
+      if (controller == null || controller.callId != callId) {
         Logs().w('[VOIP] Callkit event for unknown callId $callId, ignoring');
         return;
       }
@@ -100,31 +92,21 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
       switch (event.event) {
         case ck.Event.actionCallAccept:
           Logs().i('[VOIP] Callkit accept => answering call $callId');
-          try {
-            await call.answer();
-          } catch (e) {
-            Logs().w('[VOIP] Callkit answer failed: $e');
-          }
+          await controller.answer();
           break;
         case ck.Event.actionCallDecline:
           Logs().i('[VOIP] Callkit decline => rejecting call $callId');
-          try {
-            await call.reject();
-          } catch (e) {
-            Logs().w('[VOIP] Callkit reject failed: $e');
-          }
+          await controller.reject();
           break;
         case ck.Event.actionCallEnded:
         case ck.Event.actionCallTimeout:
           Logs().i('[VOIP] Callkit ended/timeout => hanging up call $callId');
-          if (!call.callHasEnded) {
-            try {
-              await call.hangup(reason: CallErrorCode.userHangup);
-            } catch (e) {
-              Logs().w('[VOIP] Callkit hangup failed: $e');
-            }
+          if (!controller.call.callHasEnded) {
+            await controller.hangUp();
           }
           break;
+        // The real (mobile) Event enum has more variants than the stub.
+        // ignore: unreachable_switch_default
         default:
           Logs().i('[VOIP] Ignoring unsupported Callkit event ${event.event}');
           break;
@@ -139,23 +121,31 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
         state == AppLifecycleState.paused);
   }
 
-  void addCallingOverlay(String callId, CallSession call) {
-    // Notify the ValueNotifier so AppNavigationShell shows the full-screen
-    // CallScreen via its Stack overlay (the reliable in-tree approach).
-    // NOTE: we intentionally do NOT use Overlay.of(context) here because
-    // `matrix.context` sits ABOVE the Navigator/Overlay in the widget tree
-    // (Matrix wraps its child GoRouter), so Overlay.of() returns null and
-    // any insert attempt is silently dropped.
-    activeCallNotifier.value = ActiveCallState(
-      callId: callId,
-      call: call,
-      client: client,
-    );
+  /// Publishes [controller] as the active call, disposing any previous one.
+  void _publish(ActiveCallController? controller) {
+    final previous = activeCallNotifier.value;
+    if (previous == controller) return;
+    activeCallNotifier.value = controller;
+    previous?.dispose();
+    if (controller == null) {
+      callExpandedNotifier.value = false;
+    }
+  }
+
+  /// Returns the controller for [call], creating and publishing it if needed.
+  ActiveCallController _controllerFor(CallSession call) {
+    final existing = activeCallNotifier.value;
+    if (existing != null && existing.callId == call.callId) return existing;
+    final controller = ActiveCallController(call: call, client: client);
+    _publish(controller);
+    return controller;
   }
 
   @override
   MediaDevices get mediaDevices =>
-      kIsWeb ? _webMediaDevices : webrtc_impl.navigator.mediaDevices;
+      (kIsWeb || PlatformInfos.isDesktop)
+          ? _mediaDevicesWrapper
+          : webrtc_impl.navigator.mediaDevices;
 
   @override
   bool get isWeb => kIsWeb;
@@ -191,7 +181,9 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
       final hasStun = iceServers.any((s) {
         final urls = s is Map ? (s['urls'] ?? s['url']) : null;
         if (urls is String) return urls.startsWith('stun:');
-        if (urls is List) return urls.any((u) => u.toString().startsWith('stun:'));
+        if (urls is List) {
+          return urls.any((u) => u.toString().startsWith('stun:'));
+        }
         return false;
       });
       if (!hasStun) {
@@ -203,67 +195,65 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
     return webrtc_impl.createPeerConnection(configuration, constraints);
   }
 
-  Future<bool> get hasCallingAccount async => false;
-
+  // The SDK rings before handleNewCall (so the user hears the call even if
+  // media setup is slow). CallSounds is idempotent, so this composes safely
+  // with ActiveCallController driving the same sounds.
   @override
   Future<void> playRingtone() async {
-    if (!background && !await hasCallingAccount) {
-      try {
-        await UserMediaManager().startRingingTone();
-      } catch (_) {}
-    }
+    if (CallkitService.instance.isSupported) return; // native UI rings
+    await CallSounds.instance.startRingtone();
   }
 
   @override
   Future<void> stopRingtone() async {
-    if (!background && !await hasCallingAccount) {
-      try {
-        await UserMediaManager().stopRingingTone();
-      } catch (_) {}
-    }
+    await CallSounds.instance.stop();
+  }
+
+  @override
+  Future<void> registerListeners(CallSession session) async {
+    // Called by the SDK before media setup for both incoming and outgoing
+    // calls — the earliest reliable moment to show the call UI. Incoming
+    // calls whose getUserMedia fails still get a visible (ended) call this
+    // way instead of disappearing silently.
+    _controllerFor(session);
   }
 
   @override
   Future<void> handleNewCall(CallSession call) async {
-    // Trigger in-app overlay immediately — before any async native bridge
-    // calls so the UI is queued on the very next frame, eliminating pickup delay.
-    addCallingOverlay(call.callId, call);
+    // Idempotent — normally already published by registerListeners.
+    final controller = _controllerFor(call);
 
-    final callkit = CallkitService.instance;
-    final callerName = call.room.getLocalizedDisplayname();
-    final avatarUrl = call.room
-        .getState(EventTypes.RoomAvatar)
-        ?.content
-        .tryGet<String>('url');
     final isVideo = call.type == CallType.kVideo;
-
-    // Show native incoming/outgoing call screen on iOS/Android
+    final callkit = CallkitService.instance;
     if (callkit.isSupported) {
+      final avatarUrl = call.room
+          .getState(EventTypes.RoomAvatar)
+          ?.content
+          .tryGet<String>('url');
       try {
         if (call.isOutgoing) {
           await callkit.showOutgoingCall(
             session: call,
-            calleeName: callerName,
+            calleeName: controller.displayName,
             avatarUrl: avatarUrl,
             isVideo: isVideo,
           );
         } else {
           await callkit.showIncomingCall(
             session: call,
-            callerName: callerName,
+            callerName: controller.displayName,
             avatarUrl: avatarUrl,
             isVideo: isVideo,
           );
         }
       } catch (e) {
-        Logs().w('[VOIP] CallKit failed, falling back to overlay: $e');
+        Logs().w('[VOIP] CallKit failed, falling back to in-app UI: $e');
       }
     }
 
-    if (PlatformInfos.isAndroid) {
+    if (PlatformInfos.isAndroid && !call.isOutgoing) {
       try {
         final wasForeground = await FlutterForegroundTask.isAppOnForeground;
-
         await matrix.store.setString(
           'wasForeground',
           wasForeground == true ? 'true' : 'false',
@@ -275,40 +265,25 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
         Logs().e('VOIP foreground failed $e');
       }
     }
-
-    // Notify CallKit when the call actually connects so the native timer starts
-    if (CallkitService.instance.isSupported) {
-      call.onCallStateChanged.stream.listen((state) {
-        if (state == CallState.kConnected) {
-          ck.FlutterCallkitIncoming.setCallConnected(call.callId)
-              .catchError((e) => Logs().w('[VOIP] setCallConnected failed: $e'));
-        }
-      });
-    }
   }
 
   @override
   Future<void> handleCallEnded(CallSession session) async {
-    // Dismiss native call screen
+    // Dismiss native call screen.
     try {
       await CallkitService.instance.endCall(session.callId);
     } catch (e) {
       Logs().w('[VOIP] CallKit endCall failed: $e');
     }
 
-    // Clear the inline call sidebar panel (all platforms)
+    // Collapse the expanded panel; keep the "Call ended" state visible
+    // briefly, then clear — unless a new call has replaced it already.
     callExpandedNotifier.value = false;
-    // Small delay so the "Call ended" state is visible briefly
     Future.delayed(const Duration(seconds: 2), () {
       if (activeCallNotifier.value?.callId == session.callId) {
-        activeCallNotifier.value = null;
+        _publish(null);
       }
     });
-
-    if (overlayEntry != null) {
-      overlayEntry!.remove();
-      overlayEntry = null;
-    }
 
     if (PlatformInfos.isAndroid) {
       FlutterForegroundTask.setOnLockScreenVisibility(false);
@@ -317,6 +292,41 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
       if (wasForeground == 'false') FlutterForegroundTask.minimizeApp();
     }
   }
+
+  @override
+  bool get canHandleNewCall =>
+      voip.currentCID == null && voip.currentGroupCID == null;
+
+  @override
+  Future<void> handleMissedCall(CallSession session) async {
+    Logs().i(
+      '[VOIP] Missed call from ${session.room.getLocalizedDisplayname()}',
+    );
+    try {
+      final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      await flutterLocalNotificationsPlugin.show(
+        id: session.callId.hashCode,
+        title: 'Missed Call',
+        body: 'Missed call from ${session.room.getLocalizedDisplayname()}',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'calls_channel',
+            'Calls',
+            channelDescription: 'Incoming and missed call notifications',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+          iOS: DarwinNotificationDetails(),
+        ),
+      );
+    } catch (e) {
+      Logs().w('[VOIP] Failed to show missed call notification: $e');
+    }
+  }
+
+  @override
+  EncryptionKeyProvider? get keyProvider => null;
 
   // ── Group Call State ──
   GroupCallSession? activeGroupCall;
@@ -337,9 +347,7 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
     Logs().i('[VOIP] New group call: ${groupCall.groupCallId}');
     activeGroupCall = groupCall;
 
-    final context = kIsWeb
-        ? ChatList.contextForVoip!
-        : this.context;
+    final context = kIsWeb ? ChatList.contextForVoip! : this.context;
 
     if (kIsWeb) {
       showDialog(
@@ -365,47 +373,5 @@ class VoipPlugin with WidgetsBindingObserver implements WebRTCDelegate {
       );
       Overlay.of(context).insert(groupCallOverlayEntry!);
     }
-  }
-
-  @override
-  // TODO: implement canHandleNewCall
-  bool get canHandleNewCall =>
-      voip.currentCID == null && voip.currentGroupCID == null;
-
-  @override
-  Future<void> handleMissedCall(CallSession session) async {
-    Logs().i('[VOIP] Missed call from ${session.room.getLocalizedDisplayname()}');
-    // Show a local notification for the missed call
-    try {
-      final flutterLocalNotificationsPlugin =
-          FlutterLocalNotificationsPlugin();
-      await flutterLocalNotificationsPlugin.show(
-        id: session.callId.hashCode,
-        title: 'Missed Call',
-        body: 'Missed call from ${session.room.getLocalizedDisplayname()}',
-        notificationDetails: const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'calls_channel',
-            'Calls',
-            channelDescription: 'Incoming and missed call notifications',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-          ),
-          iOS: DarwinNotificationDetails(),
-        ),
-      );
-    } catch (e) {
-      Logs().w('[VOIP] Failed to show missed call notification: $e');
-    }
-  }
-
-  @override
-  EncryptionKeyProvider? get keyProvider => null;
-
-  @override
-  Future<void> registerListeners(CallSession session) async {
-    // Call state listeners are registered in the dialer UI (Calling widget).
-    // No additional SDK-level listeners needed here.
   }
 }

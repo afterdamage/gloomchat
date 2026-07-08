@@ -22,6 +22,7 @@ import 'package:afterdamage/utils/init_with_restore.dart';
 import 'package:afterdamage/utils/matrix_sdk_extensions/matrix_file_extension.dart';
 import 'package:afterdamage/utils/platform_infos.dart';
 import 'package:afterdamage/utils/uia_request_manager.dart';
+import 'package:afterdamage/utils/voip/active_call_controller.dart';
 import 'package:afterdamage/utils/voip_plugin.dart';
 import 'package:afterdamage/widgets/adaptive_dialogs/show_ok_cancel_alert_dialog.dart';
 import 'package:afterdamage/widgets/gloom_chat_app.dart';
@@ -84,8 +85,8 @@ class MatrixState extends State<Matrix> with WidgetsBindingObserver {
   // always wired up regardless of whether VoipPlugin has been initialised yet.
   // This fixes the receiver-side bug where _CallScreenRoot built before login
   // would never see activeCallNotifier because voipPlugin was null at that time.
-  final ValueNotifier<ActiveCallState?> activeCallNotifier =
-      ValueNotifier<ActiveCallState?>(null);
+  final ValueNotifier<ActiveCallController?> activeCallNotifier =
+      ValueNotifier<ActiveCallController?>(null);
   final ValueNotifier<bool> callExpandedNotifier = ValueNotifier<bool>(false);
 
   bool get isMultiAccount => widget.clients.length > 1;

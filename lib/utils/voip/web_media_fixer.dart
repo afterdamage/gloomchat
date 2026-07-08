@@ -4,27 +4,27 @@ import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc_impl;
 import 'package:matrix/matrix.dart';
 import 'package:webrtc_interface/webrtc_interface.dart';
 
-/// A [MediaDevices] wrapper that prevents incoming calls from being killed on
-/// web when the browser refuses `getUserMedia` due to a missing user gesture.
+import 'package:afterdamage/utils/platform_infos.dart';
+
+/// A [MediaDevices] wrapper that prevents incoming calls from being killed
+/// when `getUserMedia` fails before the user has interacted.
 ///
 /// **Problem:** The Matrix SDK calls `getUserMedia()` inside
 /// `initWithInvite()` *before* the user clicks "Answer". On web, browsers
-/// require a user gesture to grant microphone/camera access, so the call throws
-/// `NotAllowedError` → `_getUserMediaFailed` → call terminated. The user never
-/// even sees the incoming call UI.
+/// require a user gesture to grant microphone/camera access, so the call
+/// throws `NotAllowedError` → `_getUserMediaFailed` → call terminated. On
+/// desktop, a missing or busy capture device does the same. Either way the
+/// user never even sees the incoming call UI.
 ///
-/// **Solution:** On web, this wrapper catches the permission error and returns
-/// a silent empty [MediaStream] so the call can reach the "Ringing" state.
-/// When the user taps "Answer" (a real user gesture), the actual media is
-/// requested again by the SDK's `answer()` flow which replaces the placeholder
-/// tracks.
-///
-/// On non-web platforms this wrapper is a transparent pass-through.
+/// **Solution:** On web and desktop, this wrapper catches the error and
+/// returns a silent empty [MediaStream] so the call can reach the "Ringing"
+/// state. When the user taps "Answer" (a real user gesture),
+/// [ActiveCallController.answer] swaps in the real media.
 class WebMediaDevicesWrapper extends MediaDevices {
   final MediaDevices _delegate;
 
   /// Whether the last `getUserMedia` call returned a placeholder (silent)
-  /// stream because the browser denied the real request.
+  /// stream because the real request failed.
   bool usedPlaceholder = false;
 
   WebMediaDevicesWrapper(this._delegate);
@@ -38,11 +38,12 @@ class WebMediaDevicesWrapper extends MediaDevices {
       usedPlaceholder = false;
       return stream;
     } catch (e) {
-      if (kIsWeb && _isPermissionError(e)) {
+      final canFallBack = kIsWeb || PlatformInfos.isDesktop;
+      if (canFallBack && _isRecoverableMediaError(e)) {
         Logs().w(
-          '[WebMediaFixer] getUserMedia blocked (no user gesture / permission '
-          'denied) — returning silent placeholder stream so the incoming call '
-          'can ring. Error: $e',
+          '[WebMediaFixer] getUserMedia failed (no user gesture / permission '
+          'denied / device unavailable) — returning silent placeholder stream '
+          'so the incoming call can ring. Error: $e',
         );
         usedPlaceholder = true;
         // Create a real but empty MediaStream so the SDK doesn't crash.
@@ -88,13 +89,19 @@ class WebMediaDevicesWrapper extends MediaDevices {
 
   // ── Helpers ────────────────────────────────────────────────────────────
 
-  /// Detects permission-related errors from the browser's getUserMedia.
-  static bool _isPermissionError(Object error) {
+  /// Errors from getUserMedia that should ring with a placeholder stream
+  /// rather than kill the incoming call: permission problems (web gesture
+  /// requirement) and missing/busy capture devices (desktop).
+  static bool _isRecoverableMediaError(Object error) {
     final msg = error.toString().toLowerCase();
     return msg.contains('notallowederror') ||
         msg.contains('not allowed') ||
         msg.contains('permission denied') ||
         msg.contains('permissiondenied') ||
+        msg.contains('notfounderror') ||
+        msg.contains('devicesnotfounderror') ||
+        msg.contains('notreadableerror') ||
+        msg.contains('trackstarterror') ||
         msg.contains('unable to getusermedia');
   }
 }
