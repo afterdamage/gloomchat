@@ -25,11 +25,7 @@ class CallSidebarPanel extends StatefulWidget {
   final ActiveCallController controller;
   final VoidCallback? onExpand;
 
-  const CallSidebarPanel({
-    required this.controller,
-    this.onExpand,
-    super.key,
-  });
+  const CallSidebarPanel({required this.controller, this.onExpand, super.key});
 
   @override
   State<CallSidebarPanel> createState() => _CallSidebarPanelState();
@@ -57,15 +53,16 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _shimmyAnimation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0, end: -6), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: -6, end: 6), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 6, end: -4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -4, end: 4), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
-    ]).animate(
-      CurvedAnimation(parent: _shimmyController, curve: Curves.easeInOut),
-    );
+    _shimmyAnimation =
+        TweenSequence<double>([
+          TweenSequenceItem(tween: Tween(begin: 0, end: -6), weight: 1),
+          TweenSequenceItem(tween: Tween(begin: -6, end: 6), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 6, end: -4), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: -4, end: 4), weight: 2),
+          TweenSequenceItem(tween: Tween(begin: 4, end: 0), weight: 1),
+        ]).animate(
+          CurvedAnimation(parent: _shimmyController, curve: Curves.easeInOut),
+        );
 
     controller.addListener(_onControllerChanged);
     if (controller.isIncomingRinging) {
@@ -245,8 +242,9 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
                           _SidebarControlButton(
                             icon: FontAwesomeIcons.phone,
                             color: DraculaColors.green,
-                            bgColor:
-                                DraculaColors.green.withValues(alpha: 0.15),
+                            bgColor: DraculaColors.green.withValues(
+                              alpha: 0.15,
+                            ),
                             onTap: () async {
                               await controller.answer();
                               widget.onExpand?.call();
@@ -276,15 +274,18 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
                                 : FontAwesomeIcons.microphone,
                             color: controller.isMicrophoneMuted
                                 ? DraculaColors.red
-                                : DraculaColors.foreground
-                                    .withValues(alpha: 0.7),
+                                : DraculaColors.foreground.withValues(
+                                    alpha: 0.7,
+                                  ),
                             bgColor: controller.isMicrophoneMuted
                                 ? DraculaColors.red.withValues(alpha: 0.15)
-                                : DraculaColors.currentLine
-                                    .withValues(alpha: 0.6),
+                                : DraculaColors.currentLine.withValues(
+                                    alpha: 0.6,
+                                  ),
                             onTap: controller.toggleMicrophone,
-                            tooltip:
-                                controller.isMicrophoneMuted ? 'Unmute' : 'Mute',
+                            tooltip: controller.isMicrophoneMuted
+                                ? 'Unmute'
+                                : 'Mute',
                           ),
                         ],
 
@@ -297,12 +298,14 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
                                 : FontAwesomeIcons.video,
                             color: controller.isLocalVideoMuted
                                 ? DraculaColors.red
-                                : DraculaColors.foreground
-                                    .withValues(alpha: 0.7),
+                                : DraculaColors.foreground.withValues(
+                                    alpha: 0.7,
+                                  ),
                             bgColor: controller.isLocalVideoMuted
                                 ? DraculaColors.red.withValues(alpha: 0.15)
-                                : DraculaColors.currentLine
-                                    .withValues(alpha: 0.6),
+                                : DraculaColors.currentLine.withValues(
+                                    alpha: 0.6,
+                                  ),
                             onTap: controller.toggleCamera,
                             tooltip: controller.isLocalVideoMuted
                                 ? 'Turn on camera'
@@ -315,12 +318,13 @@ class _CallSidebarPanelState extends State<CallSidebarPanel>
                         // Expand button
                         if (isConnected)
                           _SidebarControlButton(
-                            icon: FontAwesomeIcons
-                                .upRightAndDownLeftFromCenter,
-                            color:
-                                DraculaColors.foreground.withValues(alpha: 0.7),
-                            bgColor: DraculaColors.currentLine
-                                .withValues(alpha: 0.6),
+                            icon: FontAwesomeIcons.upRightAndDownLeftFromCenter,
+                            color: DraculaColors.foreground.withValues(
+                              alpha: 0.7,
+                            ),
+                            bgColor: DraculaColors.currentLine.withValues(
+                              alpha: 0.6,
+                            ),
                             onTap: widget.onExpand,
                             tooltip: 'Expand call',
                           ),
@@ -407,7 +411,11 @@ class CallFloatingPanel extends StatelessWidget {
         final hasLocalVideo =
             localStream != null && !controller.isLocalVideoMuted;
 
-        const panelHeight = 320.0;
+        // Scale with the window like Discord's voice area: video calls get
+        // more room than voice-only avatar tiles.
+        final windowHeight = MediaQuery.sizeOf(context).height;
+        final panelHeight = (windowHeight * (hasRemoteVideo ? 0.55 : 0.42))
+            .clamp(280.0, hasRemoteVideo ? 640.0 : 480.0);
 
         return Container(
           width: double.infinity,
@@ -423,8 +431,10 @@ class CallFloatingPanel extends StatelessWidget {
             children: [
               // Title bar
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: DraculaColors.currentLine.withValues(alpha: 0.8),
                 ),
@@ -502,43 +512,47 @@ class CallFloatingPanel extends StatelessWidget {
     WrappedMediaStream? localStream,
   }) {
     if (hasRemoteVideo) {
-      return Stack(
-        children: [
-          Positioned.fill(
-            child: VideoRenderer(
-              remoteStream!,
-              mirror: false,
-              fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
-            ),
-          ),
-          if (hasLocalVideo)
-            Positioned(
-              right: 10,
-              bottom: 10,
-              child: Container(
-                width: 120,
-                height: 90,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: DraculaColors.currentLine,
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                clipBehavior: Clip.antiAlias,
-                child: VideoRenderer(
-                  localStream!,
-                  mirror: true,
-                  fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
-                ),
+      return LayoutBuilder(
+        builder: (context, constraints) => Stack(
+          children: [
+            Positioned.fill(
+              child: VideoRenderer(
+                remoteStream!,
+                mirror: false,
+                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
               ),
             ),
-        ],
+            if (hasLocalVideo)
+              Positioned(
+                right: 10,
+                bottom: 10,
+                child: Container(
+                  // Keep the self-view proportional to the panel.
+                  width: (constraints.maxHeight * 0.42).clamp(120.0, 240.0),
+                  height:
+                      (constraints.maxHeight * 0.42).clamp(120.0, 240.0) * 0.75,
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: DraculaColors.currentLine,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: VideoRenderer(
+                    localStream!,
+                    mirror: true,
+                    fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  ),
+                ),
+              ),
+          ],
+        ),
       );
     }
 
@@ -689,8 +703,7 @@ class _FloatingControlButton extends StatelessWidget {
             height: size,
             decoration: BoxDecoration(
               shape: BoxShape.rectangle,
-              color:
-                  bgColor ?? DraculaColors.background.withValues(alpha: 0.5),
+              color: bgColor ?? DraculaColors.background.withValues(alpha: 0.5),
             ),
             child: FaIcon(icon, color: color, size: size * 0.38),
           ),
@@ -750,7 +763,8 @@ class _ParticipantAvatar extends StatelessWidget {
                     builder: (context, snapshot) {
                       return Avatar(
                         mxContent: snapshot.data?.avatarUrl,
-                        name: snapshot.data?.displayName ??
+                        name:
+                            snapshot.data?.displayName ??
                             client.userID?.localpart ??
                             'You',
                         size: 76,
