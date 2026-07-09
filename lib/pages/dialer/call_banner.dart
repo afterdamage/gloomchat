@@ -371,6 +371,7 @@ class _SidebarControlButton extends StatelessWidget {
           child: Container(
             width: wide ? 40 : 34,
             height: 34,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.zero,
               color: bgColor,
@@ -557,30 +558,40 @@ class CallFloatingPanel extends StatelessWidget {
     }
 
     // Voice call or video call with no remote video yet —
-    // Discord-style avatar tiles for both participants.
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 32,
-        runSpacing: 16,
-        children: [
-          _ParticipantAvatar(
-            avatarUrl: controller.avatarUrl,
-            name: controller.displayName,
-            isMuted: controller.call.remoteUserMediaStream?.audioMuted ?? false,
-            isSpeaking: controller.isConnected,
-            client: controller.client,
+    // Discord-style avatar tiles for both participants, scaled to the panel.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final tileSize =
+            (constraints.maxHeight * 0.45).clamp(88.0, 176.0).toDouble();
+        return Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 32,
+            runSpacing: 16,
+            children: [
+              _ParticipantAvatar(
+                avatarUrl: controller.avatarUrl,
+                name: controller.displayName,
+                isMuted:
+                    controller.call.remoteUserMediaStream?.audioMuted ?? false,
+                isSpeaking: controller.isConnected,
+                client: controller.client,
+                size: tileSize,
+              ),
+              _ParticipantAvatar(
+                avatarUrl: null,
+                name: controller.client.userID?.localpart ?? 'You',
+                isMuted: controller.isMicrophoneMuted,
+                isSpeaking: false,
+                isLocal: true,
+                client: controller.client,
+                size: tileSize,
+              ),
+            ],
           ),
-          _ParticipantAvatar(
-            avatarUrl: null,
-            name: controller.client.userID?.localpart ?? 'You',
-            isMuted: controller.isMicrophoneMuted,
-            isSpeaking: false,
-            isLocal: true,
-            client: controller.client,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -656,6 +667,7 @@ class CallFloatingPanel extends StatelessWidget {
                 child: Container(
                   width: 52,
                   height: 36,
+                  alignment: Alignment.center,
                   color: DraculaColors.red,
                   child: const FaIcon(
                     FontAwesomeIcons.phoneSlash,
@@ -701,6 +713,7 @@ class _FloatingControlButton extends StatelessWidget {
           child: Container(
             width: size,
             height: size,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               shape: BoxShape.rectangle,
               color: bgColor ?? DraculaColors.background.withValues(alpha: 0.5),
@@ -721,6 +734,7 @@ class _ParticipantAvatar extends StatelessWidget {
   final bool isSpeaking;
   final bool isLocal;
   final Client client;
+  final double size;
 
   const _ParticipantAvatar({
     required this.avatarUrl,
@@ -729,16 +743,19 @@ class _ParticipantAvatar extends StatelessWidget {
     required this.client,
     this.isSpeaking = false,
     this.isLocal = false,
+    this.size = 88,
   });
 
   @override
   Widget build(BuildContext context) {
+    // Border (3) + padding (3) on each side around the inner avatar.
+    final avatarSize = size - 12;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 88,
-          height: 88,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             shape: BoxShape.rectangle,
             border: Border.all(
@@ -767,7 +784,7 @@ class _ParticipantAvatar extends StatelessWidget {
                             snapshot.data?.displayName ??
                             client.userID?.localpart ??
                             'You',
-                        size: 76,
+                        size: avatarSize,
                         client: client,
                       );
                     },
@@ -775,14 +792,14 @@ class _ParticipantAvatar extends StatelessWidget {
                 : Avatar(
                     mxContent: avatarUrl,
                     name: name,
-                    size: 76,
+                    size: avatarSize,
                     client: client,
                   ),
           ),
         ),
         const SizedBox(height: 10),
         SizedBox(
-          width: 100,
+          width: size + 12,
           child: Text(
             isLocal ? 'You' : name,
             style: const TextStyle(
