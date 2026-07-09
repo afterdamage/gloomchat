@@ -1,4 +1,5 @@
 import 'package:afterdamage/config/themes.dart';
+import 'package:afterdamage/pages/dialer/call_banner.dart';
 import 'package:flutter/material.dart';
 
 class TwoColumnLayout extends StatelessWidget {
@@ -29,7 +30,15 @@ class TwoColumnLayout extends StatelessWidget {
               child: mainView,
             ),
             Container(width: 1.0, color: theme.dividerColor),
-            Expanded(child: ClipRRect(child: sideView)),
+            Expanded(
+              child: Column(
+                children: [
+                  // Discord-style call panel above the chat area.
+                  const GlobalCallFloatingPanel(),
+                  Expanded(child: ClipRRect(child: sideView)),
+                ],
+              ),
+            ),
           ],
         ),
       ),

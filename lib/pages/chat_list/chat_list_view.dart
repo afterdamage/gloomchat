@@ -7,6 +7,7 @@ import 'package:afterdamage/config/setting_keys.dart';
 import 'package:afterdamage/config/themes.dart';
 import 'package:afterdamage/l10n/l10n.dart';
 import 'package:afterdamage/pages/chat_list/chat_list.dart';
+import 'package:afterdamage/pages/dialer/call_banner.dart';
 import 'package:afterdamage/ui/icons/afterdamage_icons.dart';
 import 'package:afterdamage/widgets/app_destinations.dart';
 import 'package:afterdamage/widgets/app_navigation_shell.dart';
@@ -50,11 +51,22 @@ class ChatListView extends StatelessWidget {
             Container(color: Theme.of(context).dividerColor, width: 1),
           ],
           Expanded(
-            child: GestureDetector(
-              onTap: FocusManager.instance.primaryFocus?.unfocus,
-              excludeFromSemantics: true,
-              behavior: HitTestBehavior.translucent,
-              child: ChatListViewBody(controller),
+            child: Column(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: FocusManager.instance.primaryFocus?.unfocus,
+                    excludeFromSemantics: true,
+                    behavior: HitTestBehavior.translucent,
+                    child: ChatListViewBody(controller),
+                  ),
+                ),
+                // Discord-style "Voice Connected" bar at the bottom of the
+                // room list. On narrow layouts AppNavigationShell already
+                // mounts it via AppNavRail, so only add it in column mode.
+                if (GloomThemes.isColumnMode(context))
+                  const GlobalCallSidebar(),
+              ],
             ),
           ),
         ],
