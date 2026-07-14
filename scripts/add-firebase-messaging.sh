@@ -5,8 +5,8 @@ flutter pub get
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
   sed -i '' 's,//<GOOGLE_SERVICES>,,g' lib/utils/background_push.dart
-  sed -i '' -e 's,^/\*,,' -e 's,\*/$,,' android/app/src/main/kotlin/chat/gloom/gloomchat/FcmPushService.kt
+  sed -i '' -e 's,^/\*,,' -e 's,\*/$,,' android/app/src/main/kotlin/im/gloomchat/android/FcmPushService.kt
 else
   sed -i 's,//<GOOGLE_SERVICES>,,g' lib/utils/background_push.dart
-  sed -i -e 's,^/\*,,' -e 's,\*/$,,' android/app/src/main/kotlin/chat/gloom/gloomchat/FcmPushService.kt
+  sed -i -e 's,^/\*,,' -e 's,\*/$,,' android/app/src/main/kotlin/im/gloomchat/android/FcmPushService.kt
 fi
