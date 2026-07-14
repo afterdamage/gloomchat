@@ -130,6 +130,7 @@ class BackgroundPush {
       //<GOOGLE_SERVICES>    activeRoomId: matrix?.activeRoomId,
       //<GOOGLE_SERVICES>    flutterLocalNotificationsPlugin: _flutterLocalNotificationsPlugin,
       //<GOOGLE_SERVICES>  ),
+      //<GOOGLE_SERVICES>  onNewToken: _onFcmNewToken,
       //<GOOGLE_SERVICES>);
       if (Platform.isAndroid) {
         await UnifiedPush.initialize(
@@ -379,6 +380,15 @@ class BackgroundPush {
     );
   }
 
+  Future<void> _onFcmNewToken(String token) async {
+    Logs().i('[Push] Firebase token refreshed');
+    _fcmToken = token;
+    await setupPusher(
+      gatewayUrl: AppSettings.pushNotificationsGatewayUrl.value,
+      token: token,
+    );
+  }
+
   Future<void> _setupApns() async {
     const channel = MethodChannel('im.gloomchat/apns');
     String? token;
@@ -406,6 +416,24 @@ class BackgroundPush {
     ).registerAppWithDialog();
   }
 
+  Future<void> _removeFirebasePusher() async {
+    final firebaseAppId = '${AppConfig.pushNotificationsAppId}.data_message';
+    final pushers =
+        await (client.getPushers().catchError((e) {
+          Logs().w('[Push] Unable to request pushers', e);
+          return <Pusher>[];
+        })) ??
+        [];
+    for (final pusher in pushers.where((p) => p.appId == firebaseAppId)) {
+      try {
+        await client.deletePusher(pusher);
+        Logs().i('[Push] Removed Firebase pusher after switching to UnifiedPush');
+      } catch (err) {
+        Logs().w('[Push] Failed to remove Firebase pusher', err);
+      }
+    }
+  }
+
   Future<void> _newUpEndpoint(PushEndpoint newPushEndpoint, String i) async {
     final newEndpoint = newPushEndpoint.url;
     upAction = true;
@@ -413,6 +441,7 @@ class BackgroundPush {
       await _upUnregistered(i);
       return;
     }
+    await _removeFirebasePusher();
     var endpoint =
         'https://matrix.gateway.unifiedpush.org/_matrix/push/v1/notify';
     try {
