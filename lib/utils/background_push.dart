@@ -23,6 +23,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:ui';
 
+//<GOOGLE_SERVICES>import 'package:fcm_shared_isolate/fcm_shared_isolate.dart';
 import 'package:afterdamage/l10n/l10n.dart';
 import 'package:afterdamage/main.dart';
 import 'package:afterdamage/utils/notification_background_handler.dart';
@@ -61,11 +62,17 @@ class BackgroundPush {
   }
 
   final pendingTests = <String, Completer<void>>{};
+  bool firebaseEnabled = false;
+  String? _fcmToken;
+
+  //<GOOGLE_SERVICES>final firebase = FcmSharedIsolate();
+
   DateTime? lastReceivedPush;
 
   bool upAction = false;
 
   Future<void> _init() async {
+    //<GOOGLE_SERVICES>firebaseEnabled = true;
     try {
       mainIsolateReceivePort?.listen((message) async {
         try {
@@ -113,6 +120,18 @@ class BackgroundPush {
         onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
       );
       Logs().v('Flutter Local Notifications initialized');
+      //<GOOGLE_SERVICES>firebase.setListeners(
+      //<GOOGLE_SERVICES>  onMessage: (message) => pushHelper(
+      //<GOOGLE_SERVICES>    PushNotification.fromJson(
+      //<GOOGLE_SERVICES>      message.tryGetMap<String, Object>('data') ?? message,
+      //<GOOGLE_SERVICES>    ),
+      //<GOOGLE_SERVICES>    client: client,
+      //<GOOGLE_SERVICES>    l10n: l10n,
+      //<GOOGLE_SERVICES>    activeRoomId: matrix?.activeRoomId,
+      //<GOOGLE_SERVICES>    flutterLocalNotificationsPlugin: _flutterLocalNotificationsPlugin,
+      //<GOOGLE_SERVICES>  ),
+      //<GOOGLE_SERVICES>  onNewToken: _onFcmNewToken,
+      //<GOOGLE_SERVICES>);
       if (Platform.isAndroid) {
         await UnifiedPush.initialize(
           onNewEndpoint: _newUpEndpoint,
@@ -284,7 +303,7 @@ class BackgroundPush {
     } else if ((await UnifiedPush.getDistributors()).isNotEmpty) {
       await setupUp();
     } else {
-      await _noFcmWarning();
+      await setupFirebase();
     }
 
     // ignore: unawaited_futures
@@ -329,6 +348,47 @@ class BackgroundPush {
     });
   }
 
+  Future<void> setupFirebase() async {
+    Logs().v('Setup firebase');
+    if (!firebaseEnabled) {
+      await _noFcmWarning();
+      return;
+    }
+    if (_fcmToken?.isEmpty ?? true) {
+      const max = 5;
+      for (var i = 0; i < max; i++) {
+        try {
+          await Future.delayed(const Duration(seconds: 1));
+          //<GOOGLE_SERVICES>_fcmToken = await firebase.getToken();
+          if (_fcmToken != null) break;
+        } catch (e, s) {
+          Logs().w(
+            '[Push] cannot get token - try ($i/$max)',
+            e,
+            e is String ? null : s,
+          );
+        }
+      }
+      if (_fcmToken == null) {
+        await _noFcmWarning();
+        return;
+      }
+    }
+    await setupPusher(
+      gatewayUrl: AppSettings.pushNotificationsGatewayUrl.value,
+      token: _fcmToken,
+    );
+  }
+
+  Future<void> _onFcmNewToken(String token) async {
+    Logs().i('[Push] Firebase token refreshed');
+    _fcmToken = token;
+    await setupPusher(
+      gatewayUrl: AppSettings.pushNotificationsGatewayUrl.value,
+      token: token,
+    );
+  }
+
   Future<void> _setupApns() async {
     const channel = MethodChannel('im.gloomchat/apns');
     String? token;
@@ -356,6 +416,24 @@ class BackgroundPush {
     ).registerAppWithDialog();
   }
 
+  Future<void> _removeFirebasePusher() async {
+    final firebaseAppId = '${AppConfig.pushNotificationsAppId}.data_message';
+    final pushers =
+        await (client.getPushers().catchError((e) {
+          Logs().w('[Push] Unable to request pushers', e);
+          return <Pusher>[];
+        })) ??
+        [];
+    for (final pusher in pushers.where((p) => p.appId == firebaseAppId)) {
+      try {
+        await client.deletePusher(pusher);
+        Logs().i('[Push] Removed Firebase pusher after switching to UnifiedPush');
+      } catch (err) {
+        Logs().w('[Push] Failed to remove Firebase pusher', err);
+      }
+    }
+  }
+
   Future<void> _newUpEndpoint(PushEndpoint newPushEndpoint, String i) async {
     final newEndpoint = newPushEndpoint.url;
     upAction = true;
@@ -363,6 +441,7 @@ class BackgroundPush {
       await _upUnregistered(i);
       return;
     }
+    await _removeFirebasePusher();
     var endpoint =
         'https://matrix.gateway.unifiedpush.org/_matrix/push/v1/notify';
     try {

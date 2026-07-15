@@ -68,13 +68,21 @@ flutter run
 flutter build apk --release
 ```
 
-To enable Firebase Cloud Messaging on builds that need it:
+UnifiedPush is supported out of the box for FOSS distributions and needs no further setup.
 
-```bash
-./scripts/add-firebase-messaging.sh
-```
+To also enable Firebase Cloud Messaging as a fallback (used on builds where no UnifiedPush distributor is installed, e.g. Play Store builds):
 
-UnifiedPush is supported out of the box for FOSS distributions.
+1. Create a project in the [Firebase console](https://console.firebase.google.com) and add an Android app with package name `im.gloomchat.android`.
+2. Download the generated `google-services.json` and place it at `android/app/google-services.json`. Its presence is what turns on the Google Services Gradle plugin — nothing else to configure in Gradle.
+3. Run the helper script, which pulls in the `fcm_shared_isolate` dependency and uncomments the FCM wiring in `lib/utils/background_push.dart` and `android/app/src/main/kotlin/im/gloomchat/android/FcmPushService.kt`:
+
+   ```bash
+   ./scripts/add-firebase-messaging.sh
+   ```
+
+4. Rebuild the app.
+
+iOS doesn't use Firebase in this fork — it talks to APNs directly, so no `GoogleService-Info.plist` is needed there.
 
 ### iOS / iPadOS
 
