@@ -68,14 +68,6 @@ flutter run
 flutter build apk --release
 ```
 
-To enable Firebase Cloud Messaging on builds that need it:
-
-```bash
-./scripts/add-firebase-messaging.sh
-```
-
-UnifiedPush is supported out of the box for FOSS distributions.
-
 ### iOS / iPadOS
 
 Requires macOS, Xcode, and a configured signing identity. The repo includes a helper script:
