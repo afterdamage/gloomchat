@@ -68,21 +68,13 @@ flutter run
 flutter build apk --release
 ```
 
-UnifiedPush is supported out of the box for FOSS distributions and needs no further setup.
+To enable Firebase Cloud Messaging on builds that need it:
 
-To also enable Firebase Cloud Messaging as a fallback (used on builds where no UnifiedPush distributor is installed, e.g. Play Store builds):
+```bash
+./scripts/add-firebase-messaging.sh
+```
 
-1. Create a project in the [Firebase console](https://console.firebase.google.com) and add an Android app with package name `im.gloomchat.android`.
-2. Download the generated `google-services.json` and place it at `android/app/google-services.json`. Its presence is what turns on the Google Services Gradle plugin — nothing else to configure in Gradle.
-3. Run the helper script, which pulls in the `fcm_shared_isolate` dependency and uncomments the FCM wiring in `lib/utils/background_push.dart` and `android/app/src/main/kotlin/im/gloomchat/android/FcmPushService.kt`:
-
-   ```bash
-   ./scripts/add-firebase-messaging.sh
-   ```
-
-4. Rebuild the app.
-
-iOS doesn't use Firebase in this fork — it talks to APNs directly, so no `GoogleService-Info.plist` is needed there.
+UnifiedPush is supported out of the box for FOSS distributions.
 
 ### iOS / iPadOS
 
@@ -118,27 +110,6 @@ On Debian-based Linux you'll need a few system libraries:
 ```bash
 sudo apt install libsecret-1-dev libsecret-1-0 librhash0 libwebkit2gtk-4.0-dev libjsoncpp1
 ```
-
----
-
-## Testing
-
-Unit and widget tests live in `test/` and can be run with:
-
-```bash
-flutter test test
-```
-
-Integration tests live in `integration_test/` and exercise real app flows against a local Synapse homeserver. To run them:
-
-```bash
-./scripts/prepare_integration_test.sh
-flutter test integration_test/mobile_test.dart
-```
-
-The integration test environment is configured in `integration_test/data/integration_users.env`. A sample file is provided at `integration_test/data/integration_users.env.sample`.
-
-`integration_test/flows/` contains end-to-end scenarios such as login, messaging, chat archive, and logout.
 
 ---
 
