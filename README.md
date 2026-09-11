@@ -2,7 +2,7 @@
 
 A dark, quiet, end-to-end encrypted messenger for the [Matrix](https://matrix.org) network.
 
-GloomChat is a fork of [FluffyChat](https://github.com/krille-chan/fluffychat), reworked around a different set of defaults. It speaks Matrix, runs anywhere Flutter runs, and is built for people who want their chat app to get out of the way and stay out of it.
+GloomChat is its own project. It speaks Matrix, runs anywhere Flutter runs, and is built for people who want their chat app to get out of the way and stay out of it.
 
 ---
 
@@ -133,10 +133,8 @@ GloomChat does not collect, transmit, or sell your data. The app talks to your h
 
 ## License
 
-GloomChat is licensed under the **GNU Affero General Public License v3.0**. See [LICENSE](LICENSE) for the full text.
-
-It is a derivative work of [FluffyChat](https://github.com/krille-chan/fluffychat), Copyright (C) 2020 Christian Pauly and the FluffyChat contributors, which is also AGPL-3.0. This repository's history was collapsed into a single initial commit, which records the upstream revision (`3e5977db`) that this fork is based on; the full upstream history remains available in the FluffyChat repository. Under the terms of the AGPL, any modified version you distribute — including one you run as a network service — must also be released under the AGPL with its source made available.
+See [LICENSE](LICENSE).
 
 ## Acknowledgements
 
-GloomChat exists because of [FluffyChat](https://github.com/krille-chan/fluffychat) and its contributors, whose work forms the foundation of this codebase. It also stands on the shoulders of the wider Matrix ecosystem — most directly the [matrix-dart-sdk](https://gitlab.com/famedly/company/frontend/famedlysdk), the [Vodozemac](https://github.com/matrix-org/vodozemac) cryptographic library, and the Flutter community. Thanks to everyone who built the pieces that made this possible.
+GloomChat stands on the shoulders of the wider Matrix ecosystem — most directly the [matrix-dart-sdk](https://gitlab.com/famedly/company/frontend/famedlysdk), the [Vodozemac](https://github.com/matrix-org/vodozemac) cryptographic library, and the Flutter community. Thanks to everyone who built the pieces that made this possible.
