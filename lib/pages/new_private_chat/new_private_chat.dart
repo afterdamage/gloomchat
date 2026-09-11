@@ -1,0 +1,132 @@
+import 'dart:async';
+
+import 'package:device_info_plus/device_info_plus.dart';
+import 'package:afterdamage/config/app_config.dart';
+import 'package:afterdamage/l10n/l10n.dart';
+import 'package:afterdamage/pages/new_private_chat/new_private_chat_view.dart';
+import 'package:afterdamage/pages/new_private_chat/qr_scanner_modal.dart';
+import 'package:afterdamage/utils/adaptive_bottom_sheet.dart';
+import 'package:afterdamage/utils/gloom_share.dart';
+import 'package:afterdamage/utils/platform_infos.dart';
+import 'package:afterdamage/utils/url_launcher.dart';
+import 'package:afterdamage/widgets/matrix.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:matrix/matrix.dart';
+
+import '../../widgets/adaptive_dialogs/user_dialog.dart';
+
+class NewPrivateChat extends StatefulWidget {
+  final String? deeplink;
+  const NewPrivateChat({super.key, required this.deeplink});
+
+  @override
+  NewPrivateChatController createState() => NewPrivateChatController();
+}
+
+class NewPrivateChatController extends State<NewPrivateChat> {
+  final TextEditingController controller = TextEditingController();
+  final FocusNode textFieldFocus = FocusNode();
+
+  Future<List<Profile>>? searchResponse;
+
+  Timer? _searchCoolDown;
+
+  static const Duration _coolDown = Duration(milliseconds: 500);
+
+  @override
+  void initState() {
+    super.initState();
+
+    final deeplink = widget.deeplink;
+    if (deeplink != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        UrlLauncher(context, deeplink).openMatrixToUrl();
+      });
+    }
+  }
+
+  Future<void> searchUsers([String? input]) async {
+    final searchTerm = input ?? controller.text;
+    if (searchTerm.isEmpty) {
+      _searchCoolDown?.cancel();
+      setState(() {
+        searchResponse = _searchCoolDown = null;
+      });
+      return;
+    }
+
+    _searchCoolDown?.cancel();
+    _searchCoolDown = Timer(_coolDown, () {
+      setState(() {
+        searchResponse = _searchUser(searchTerm);
+      });
+    });
+  }
+
+  Future<List<Profile>> _searchUser(String searchTerm) async {
+    final result = await Matrix.of(
+      context,
+    ).client.searchUserDirectory(searchTerm);
+    final profiles = result.results;
+
+    if (searchTerm.isValidMatrixId &&
+        searchTerm.sigil == '@' &&
+        !profiles.any((profile) => profile.userId == searchTerm)) {
+      profiles.add(Profile(userId: searchTerm));
+    }
+
+    return profiles;
+  }
+
+  void inviteAction() => GloomShare.shareInviteLink(context);
+
+  Future<void> openScannerAction() async {
+    if (PlatformInfos.isAndroid) {
+      final info = await DeviceInfoPlugin().androidInfo;
+      if (info.version.sdkInt < 21) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(L10n.of(context).unsupportedAndroidVersionLong),
+          ),
+        );
+        return;
+      }
+    }
+    await showAdaptiveBottomSheet(
+      context: context,
+      builder: (_) => QrScannerModal(
+        onScan: (link) =>
+            UrlLauncher(context, _normalizeScannedLink(link)).openMatrixToUrl(),
+      ),
+    );
+  }
+
+  /// Translate a GloomChat invite URL (https://www.gloomchat.com/i/<id>)
+  /// back into a matrix.to URL so the existing UrlLauncher parsing path
+  /// can resolve the user/room without bouncing through the browser.
+  String _normalizeScannedLink(String link) {
+    const prefix = AppConfig.gloomchatInviteUrlPrefix;
+    if (link.startsWith(prefix)) {
+      final rest = link.substring(prefix.length);
+      final id = Uri.decodeComponent(rest);
+      return '${AppConfig.inviteLinkPrefix}$id';
+    }
+    return link;
+  }
+
+  Future<void> copyUserId() async {
+    await Clipboard.setData(
+      ClipboardData(text: Matrix.of(context).client.userID!),
+    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(L10n.of(context).copiedToClipboard)));
+  }
+
+  void openUserModal(Profile profile) =>
+      UserDialog.show(context: context, profile: profile);
+
+  @override
+  Widget build(BuildContext context) => NewPrivateChatView(this);
+}

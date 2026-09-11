@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#4A0F1F">
+  <meta name="description" content="You've been invited to chat on GloomChat.">
+  <title>Open in GloomChat</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/icons/Icon-192.png">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #000;
+      --panel: #1a0a10;
+      --accent: #4A0F1F;
+      --accent-hi: #7a1a33;
+      --text: #f5e9ec;
+      --muted: #b89aa3;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, #1a0a10 0%, #000 70%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .logo {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 32px rgba(122, 26, 51, 0.5);
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 600;
+      margin: 0 0 12px;
+      letter-spacing: -0.02em;
+    }
+    p.lead {
+      margin: 0 0 8px;
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 420px;
+      line-height: 1.5;
+    }
+    .invite-id {
+      display: inline-block;
+      margin: 16px 0 32px;
+      padding: 8px 16px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 999px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 14px;
+      color: var(--text);
+      word-break: break-all;
+      max-width: 90vw;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 20px;
+      border-radius: 0;
+      font-size: 16px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--accent-hi);
+      transition: background 120ms ease, transform 80ms ease;
+      cursor: pointer;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hi); }
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+    }
+    .btn-secondary:hover { background: rgba(255,255,255,0.04); }
+    .small {
+      margin-top: 24px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .small a { color: var(--text); }
+    #status {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      min-height: 18px;
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <img class="logo" src="/icons/Icon-192.png" alt="GloomChat" onerror="this.style.display='none'">
+    <h1>Open in GloomChat</h1>
+    <p class="lead">You've been invited to chat on GloomChat &mdash; a secure Matrix messenger.</p>
+    <div class="invite-id" id="invite-id">&nbsp;</div>
+    <div id="status">Trying to open the GloomChat app&hellip;</div>
+    <div class="actions">
+      <a class="btn btn-primary" id="open-app" href="#">Open in GloomChat app</a>
+      <a class="btn btn-secondary" id="open-web" href="#">Open in web app</a>
+      <a class="btn btn-secondary" id="get-app" href="https://www.gloomchat.com/" target="_blank" rel="noopener">Get GloomChat</a>
+    </div>
+    <p class="small">Don't have GloomChat yet? Install it, then reopen this link.</p>
+  </main>
+  <script>
+    (function () {
+      // Extract matrix id: support /i/<id> path and ?id=<id> query.
+      function extractId() {
+        var path = window.location.pathname.replace(/^\/+/, '');
+        // path is like "i/<id>" possibly with extra slashes.
+        if (path.indexOf('i/') === 0) {
+          var rest = path.substring(2);
+          if (rest.length > 0) {
+            try { return decodeURIComponent(rest); } catch (e) { return rest; }
+          }
+        }
+        var params = new URLSearchParams(window.location.search);
+        var q = params.get('id');
+        if (q) return q;
+        return '';
+      }
+
+      var id = extractId();
+      var idEl = document.getElementById('invite-id');
+      var statusEl = document.getElementById('status');
+      var openApp = document.getElementById('open-app');
+      var openWeb = document.getElementById('open-web');
+
+      if (!id) {
+        idEl.textContent = 'No invite id found in the URL.';
+        statusEl.textContent = '';
+        openApp.style.display = 'none';
+        openWeb.style.display = 'none';
+        return;
+      }
+
+      idEl.textContent = id;
+
+      var deepLink = 'im.gloomchat://chat/' + encodeURIComponent(id);
+      var webLink = 'https://www.gloomchat.com/#/' + encodeURIComponent(id);
+
+      openApp.href = deepLink;
+      openWeb.href = webLink;
+
+      // Try the deep link automatically. If the app isn't installed,
+      // the page stays visible and the fallback buttons are used.
+      var triedAt = Date.now();
+      var hidden = false;
+      function onHide() { hidden = true; }
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) onHide();
+      });
+      window.addEventListener('pagehide', onHide);
+      window.addEventListener('blur', onHide);
+
+      // Attempt deep link via hidden iframe (works on most browsers without
+      // showing an error page if the scheme isn't registered).
+      try {
+        var iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = deepLink;
+        document.body.appendChild(iframe);
+      } catch (e) { /* ignore */ }
+
+      // Direct navigation as a backup (some Android browsers need this).
+      setTimeout(function () {
+        if (hidden) return;
+        try { window.location.href = deepLink; } catch (e) { /* ignore */ }
+      }, 100);
+
+      setTimeout(function () {
+        if (hidden) return;
+        // App didn't take over; show fallback messaging.
+        var elapsed = Date.now() - triedAt;
+        if (elapsed < 2500) return;
+        statusEl.textContent = "GloomChat doesn't appear to be installed.";
+      }, 2600);
+    })();
+  </script>
+</body>
+</html>

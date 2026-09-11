@@ -1,0 +1,17 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+  <!-- GloomChat logo -->
+  <group android:translateX="54" android:translateY="54">
+    <!-- Burgundy circular background -->
+    <path
+        android:pathData="M-36,-36 C-36,-49.25 -25.25,-60 -12,-60 L12,-60 C25.25,-60 36,-49.25 36,-36 L36,36 C36,49.25 25.25,60 12,60 L-12,60 C-25.25,60 -36,49.25 -36,36 Z"
+        android:fillColor="#4A0F1F"/>
+    <!-- Black "A" letter for contrast -->
+    <path
+        android:pathData="M-15,-25 L0,-45 L15,-25 L10,-25 L5,-32 L-5,-32 L-10,-25 Z M-3,-18 L3,-18 L8,-8 L12,-8 L0,-38 L-12,-8 L-8,-8 Z"
+        android:fillColor="#000000"/>
+  </group>
+</vector>

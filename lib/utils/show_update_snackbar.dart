@@ -1,0 +1,34 @@
+import 'package:afterdamage/config/app_config.dart';
+import 'package:afterdamage/l10n/l10n.dart';
+import 'package:afterdamage/utils/platform_infos.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher_string.dart';
+
+abstract class UpdateNotifier {
+  static const String versionStoreKey = 'last_known_version';
+
+  static Future<void> showUpdateSnackBar(BuildContext context) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final currentVersion = await PlatformInfos.getVersion();
+    final store = await SharedPreferences.getInstance();
+    final storedVersion = store.getString(versionStoreKey);
+
+    if (currentVersion != storedVersion) {
+      if (storedVersion != null) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 30),
+            showCloseIcon: true,
+            content: Text(L10n.of(context).updateInstalled(currentVersion)),
+            action: SnackBarAction(
+              label: L10n.of(context).changelog,
+              onPressed: () => launchUrlString(AppConfig.changelogUrl),
+            ),
+          ),
+        );
+      }
+      await store.setString(versionStoreKey, currentVersion);
+    }
+  }
+}

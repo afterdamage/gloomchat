@@ -1,0 +1,7 @@
+# Disable Rust's self-contained linker for the host target.
+# rust-lld (injected via -B<sysroot>/bin/gcc-ld -fuse-ld=lld) fails on this
+# distro because libgcc_s.so.1 references pthread symbols and lld enforces
+# --no-allow-shlib-undefined. Using the system bfd linker avoids this.
+[target.x86_64-unknown-linux-gnu]
+linker = "cc"
+rustflags = ["-C", "link-self-contained=no"]
